@@ -1,0 +1,133 @@
+# Number of Elements
+    9
+# Number of Grain Types
+    1
+# Maximum Grain Charge
+    10
+# Element       Mass (m_p)      Abundance (H=1)
+    H		1		1.0
+    He		4		9.75e-2
+    C		12		3.24e-4
+    N		14		1.12e-4
+    O		16		8.53e-4
+    Si		28		3.58e-5
+    S		32		1.85e-5
+    Mg		24		1.00e-8
+    Fe		56		2.50e-9
+# Grain mass density (g/cm^3)
+    3
+# Gr-Size(mu)  MassRatio
+    0.1		0.01
+# Number of Neutral Species (with ion counterpart)
+    68
+# Number of Neutral Species (without ion counterpart)
+    2
+# Number of Ion Species (without neutral counterpart)
+    36
+# Species       E_B (K)
+    H2		430.0
+    H		600.0
+    OH		2850.0
+    H2O		4800.0
+    O2		1000.0
+    CO		1150.0
+    CH4		1090.0
+    NH3		5534.0
+    NO		1600.0
+    He		100.0
+    HCO		1600.0
+    C		800.0
+    N		800.0
+    CH		925.0
+    CH2		1050.0
+    CH3		1175.0
+    NH		2378.0
+    O		800.0
+    NH2		3956.0
+    Mg		5300.0
+    C2		1600.0
+    C2H		2137.0
+    CN		1600.0
+    C2H2	2587.0
+    HCN		2050.0
+    C2H3	3037.0
+    Si		2700.0
+    N2		790.0
+    SiH		3150.0
+    SiH2	3600.0
+    H2CO	2050.0
+    SiH3	4050.0
+    SiH4	4500.0
+    CH3OH	4930.0
+    S		1100.0
+    HS		1500.0
+    H2S		2743.0
+    C3		2400.0
+    C3H		2937.0
+    C3H2	3387.0
+    C3H3	3837.0
+    CH3CCH	2470.0
+    SiC		3500.0
+    HCSi	1050.0
+    CH3CN	4680.0
+    CH2CO	2200.0
+    SiN		3500.0
+    HNSi	1100.0
+    CS		1900.0
+    SiO		3500.0
+    CO2		2990.0
+    HCS		2350.0
+    NS		1900.0
+    H2CS	2700.0
+    SO		2600.0
+    C4		3200.0
+    C4H		3737.0
+    C3N		3200.0
+    C4H2	4187.0
+    HC3N	4580.0
+    C3O		2750.0
+    C2S		5320.0
+    Fe		4200.0
+    SiS		3800.0
+    OCS		2888.0
+    SO2		5330.0
+    S2		2200.0
+    C3S		3500.0
+    HNC		2050.0
+    SiO2	4300.0
+    H3+
+    CH5+
+    NH4+
+    H3O+
+    H2NC+
+    HCNH+
+    C2H4+
+    HN2+
+    H3CO+
+    CH3OH2+
+    SiH5+
+    H3S+
+    C2N+
+    CNC+
+    C2O+
+    HC2O+
+    C3H5+
+    CH3CNH+
+    CH3CO+
+    HCO2+
+    SiOH+
+    H3CS+
+    HNS+
+    HSO+
+    HC3NH+
+    HC3O+
+    C3H2O+
+    H3C3O+
+    HC2S+
+    HSiS+
+    HOCS+
+    HSO2+
+    CH3C3NH+
+    H2S2+
+    HC3S+
+    C7+

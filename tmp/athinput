@@ -1,0 +1,27 @@
+<job>
+
+read_species    = SpeciesNames4.txt
+read_reaction   = ChemReactions6.txt
+outbase         = cplx
+outid           = R1
+
+<disk>
+Mstar          = 1.0
+Sigma          = 1700.0
+pS	           = 1.5
+Tdisk          = 280.
+pT             = 0.5
+CR_rate        = 1.0e-17
+Lx             = 1.e30
+Tx             = 5
+RD_rate        = 7.0e-19
+
+<problem>
+
+r	             = 1.       # radius(AU)
+pts            = 4        # points per scale height
+zstart         = 0        # 0 means start from midplane
+zend           = 16       # 10 pts per 
+te             = 1.0e6    # evolution time (year)
+dt0            = 1.0e-6   # trial time step (year)
+atol           = 1e-6    # error control

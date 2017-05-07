@@ -1,0 +1,9 @@
+# log file
+.log
+.dat
+.out
+.o
+gtst/
+tst/
+obj/
+bin/

@@ -81,6 +81,7 @@ init_disk(&Disk);
 init_chemout(&Chem,&ChemOut,1,"R",r,"0");
 
 for(k=zs;k<ze;k++){
+  ath_pout(0,"\nIteration=%d\n",k+1);
   zeta_eff = Ionization_disk(&Disk,r,k/pts);
   Tg = Temp_disk(&Disk,r);	  // the temperature at 1AU
   rho = Rho_disk(&Disk,r,k/pts);	 //radius + height
@@ -102,7 +103,6 @@ for(k=zs;k<ze;k++){
 
   /* output the number densities */
   output_nspecies(&Evln, &ChemOut, "z", k/pts);	
-  ath_pout(0,"zeta_eff=%e,Tg=%e,rho=%e\n",zeta_eff,Tg,rho);
   //output_etaB(&Evln, &ChemOut, "rho",rho,rho,nB);
 }
 

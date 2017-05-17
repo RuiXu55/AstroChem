@@ -33,7 +33,7 @@ static int check_flag(void *flagvalue, char *funcname, int opt);
 /*============================================================================*/
 int evolve(Real tend, Real dttry, Real abstol)
 {
-  realtype t,reltol=1.e-4;
+  realtype t,reltol=1.e-6;
   int flag, status,verbose,i;
   N_Vector numden,dndt,vrtol;
   void* cvode_mem;
@@ -48,7 +48,7 @@ int evolve(Real tend, Real dttry, Real abstol)
   for(i=0;i<Chem->Ntot;i++){
     NV_Ith_S(numden,i) = Evln.NumDen[i]; 
     NV_Ith_S(dndt,i) = 0.0;
-    NV_Ith_S(vrtol,i) = 1.e-2/Evln.DenScale[i];
+    //NV_Ith_S(vrtol,i) = 1.e0;///Evln.DenScale[i];
   }
 
   /* init CVode */ 
@@ -87,8 +87,8 @@ int evolve(Real tend, Real dttry, Real abstol)
     for(i=0;i<Chem->Ntot;i++)
       NV_Ith_S(numden,i) = Evln.NumDen[i];
     flag = CVode(cvode_mem,Evln.t, numden, &t, CV_NORMAL);
-    //Evln.t *= 1.2;
-    Evln.t = MIN(1.2*Evln.t, 1e4*OneYear+Evln.t);
+    Evln.t *= 1.2;
+    //Evln.t = MIN(1.2*Evln.t, 1e4*OneYear+Evln.t);
 
     /* copy species # density back and impose conservation */
     for(i=0;i<Chem->Ntot;i++)

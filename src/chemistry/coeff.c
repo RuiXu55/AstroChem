@@ -238,7 +238,7 @@ Real ChemCoeff(Coefficient *coeff, Real T, int NumTRange)
   {
     coef = coeff[0].alpha*pow(T/300.0, coeff[0].beta)*exp(-coeff[0].gamma/T);
     //coef = coeff[0].alpha * pow(coeff[0].Tmin/300.0, coeff[0].beta)
-    //       * exp(-coeff[0].gamma/coeff[0].Tmin);
+    //     * exp(-coeff[0].gamma/coeff[0].Tmin);
   }
 
   else{

@@ -206,12 +206,12 @@ int EleMakeup(int verbose)
         l = Chem->Elements[i].single[j];
 
         NumDen[l] *= (1.0 - frac);
-        if( NumDen[l]<0.0) NumDen[l] = 0.0;
+        //if( NumDen[l]<0.0) NumDen[l] = 0.0;
       }
      }
      /* if abundance is larger than the true value, then reduce
-      * 307      * the number densities of all neutral species containing this element
-      * 308      */
+      * the number densities of all neutral species containing this element
+      */
      else
      {
        status = EleMakeup_sub(i, disp);

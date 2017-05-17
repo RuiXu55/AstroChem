@@ -1,0 +1,33 @@
+# Number of Elements
+    4
+# Number of Grain Types
+    0
+# Maximum Grain Charge
+    2
+# Element       Mass (m_p)      Abundance (H=1)
+    H           1               1.0
+    C           12              3.24e-4
+    O           16              8.53e-4
+    S           32              1.85e-5
+# Grain mass density (g/cm^3)
+    3
+# Gr-Size(mu)  MassRatio
+# Number of Neutral Species (with +/-ion counterpart)
+    0
+# Number of Neutral Species (with +ion counterpart)
+    10
+# Number of Neutral Species (without ion counterpart)
+    0
+# Number of Ion Species (without neutral counterpart)
+    0
+# Species       E_B (K)
+    H           600.0
+    C           800.0
+    CH          925.0
+    O           800.0
+    OH          2850.0
+    H2		430.0
+    CO		1150.0
+    CH2		1050.0
+    CH3		1175.0
+    S		1100.0

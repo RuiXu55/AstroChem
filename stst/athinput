@@ -1,0 +1,46 @@
+<job>
+
+read_species    = SpeciesNames2.txt
+read_reaction   = ChemReactions.txt
+outbase         = ssmpl
+outid           = R100
+
+savep           = species_g0_r1_z0.out
+savep1          = p1.out
+saver           = reaction1.out
+
+<disk>
+
+Mstar          = 1.0
+Sigma          = 500.0
+pS	       = 1.
+Tdisk          = 280
+pT             = 0.5
+CR_rate        = 1.0e-17
+Lx             = 5.e29
+Tx             = 3.
+RD_rate        = 7.0e-19
+
+<problem>
+
+r	       = 100.
+niter          = 100
+
+depth          = 0.03
+sig            = 0.01
+sigmax         = -1
+sigmin         = -4
+
+red            = 0          # 0= one each time/1=threshold
+minratio       = 0.01       # option for red=0
+minsens        = 0.1        # only for red=1
+maxiter        = 60
+
+te             = 1.0e6      # evolution time (year)
+dt0            = 1.0e-8     # trial time step (year)
+atol           = 1e-10
+
+
+outform        = 0          # 0 only selected/1 for all
+limit          = 1e-4       # select reactions limit
+

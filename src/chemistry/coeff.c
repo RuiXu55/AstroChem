@@ -64,38 +64,7 @@ Real Rootx(Real epsi, Real nu);
 /*------------------------------------------------------------------------------
  * Set the ionization rate coefficient
  */
-void IonizationCoeff(ChemEvln *Evln, Real zeta_eff, Real Av, int verbose)
-{
-  int i;
-  Chemistry *Chem = Evln->Chem;
-
-  Evln->zeta_eff = zeta_eff;
-
-  for (i=0; i<Chem->NReaction; i++)
-  {
-    if (Chem->Reactions[i].rtype == 0)
-    { /* ionization reaction */
-      Evln->K[i] = zeta_eff * Chem->Reactions[i].coeff[0].gamma;
-
-      if (verbose == 0) {
-        PrintReaction(Chem,i,Evln->K[i]);
-      }
-    }
-    if (Chem->Reactions[i].rtype == 10)
-    { /* photoionization reaction */
-      Evln->K[i] = 10000.0*Chem->Reactions[i].coeff[0].alpha
-             *exp(-Chem->Reactions[i].coeff[0].gamma*Av);
-
-      if (verbose == 0) {
-        PrintReaction(Chem,i,Evln->K[i]);
-      }
-    }
-  }
-
-  return;
-}
-
-void IonizationCoeff1(ChemEvln *Evln, Real zeta_eff, Real Av, Real G,int verbose)
+void IonizationCoeff(ChemEvln *Evln, Real zeta_eff, Real Av, Real G, int verbose)
 {
   int i;
   Chemistry *Chem = Evln->Chem;
@@ -125,6 +94,7 @@ void IonizationCoeff1(ChemEvln *Evln, Real zeta_eff, Real Av, Real G,int verbose
 
   return;
 }
+
 /*------------------------------------------------------------------------------
  * Calculate all other rate coefficients
  */

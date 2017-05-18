@@ -141,6 +141,7 @@ typedef struct Chemistry_s {
   int SNeuInd;        /* Starting index of special neutrals (if exist)*/
   int SIonInd;        /* Starting index of special ions (if exist) */
   int GrInd;          /* Starting index of grains (if exist) */
+	int ManInd;         /* Starting index of mantle species (if exist) */
 
   int NReaction;      /* Total Number of reactions */
   int Reaction_size;  /* Size of the reaction array */

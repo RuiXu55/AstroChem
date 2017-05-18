@@ -138,7 +138,7 @@ void Cal_recomb(ChemEvln *Evln, Real Bmin, Real Bmax, int  nB,   Real Dt,
 
   /* deplete the ionization rate */
 
-  IonizationCoeff(&myEvln, 0.0, 0.0, 1);
+  IonizationCoeff(&myEvln, 0.0, 0.0,10000.,1);
 
   /* evolve the chemistry network for Dt */
 

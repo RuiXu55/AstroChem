@@ -74,10 +74,10 @@ void OutputSpecies(Chemistry *Chem);
 void init_species(Chemistry *Chem)
 {
   FILE *fp;
-  int i, j, k, p, n;
+  int i, j, k, p, n,TmpInd;
   char line[MAXLEN],mantle[8],fname[20];
   Real sumgas, grtot, ratio;
-  printf("read species begin");
+  ath_pout(0,"Read species begin!\n");
   sprintf(fname,"%s",par_gets("job","read_species"));
   fp = fopen(fname,"r");
 
@@ -286,37 +286,19 @@ void init_species(Chemistry *Chem)
     Chem->Species[n].Eb = Chem->Species[i].Eb;
     Chem->Species[n].gsize = 0.0;     /* Not used */
 
-    /* Mantle counterpart */
-    for (k=0; k<Chem->NGrain; k++)
-    {
-      n = i+(k+3)*Chem->N_Neu_f;
-
-      sprintf(mantle, "[m%d]", k+1);
-      strcpy(Chem->Species[n].name, Chem->Species[i].name);
-      strcat(Chem->Species[n].name, mantle);
-
-      Chem->Species[n].mass = Chem->Species[i].mass;
-      Chem->Species[n].charge = Chem->Species[i].charge;
-      Chem->Species[n].type   = 4;
-
-      Chem->Species[n].numelem = Chem->Species[i].numelem;
-      for (j=0; j<Chem->N_Ele_tot; j++)
-        Chem->Species[n].composition[j] = Chem->Species[i].composition[j];
-
-      Chem->Species[n].Eb = Chem->Species[i].Eb;
-      Chem->Species[n].gsize = (Real)(-k-1); /* N.B.: indicator of associated grain type */
-    }
+		ath_pout(0,"Neu_f= %s\n",Chem->Species[i].name);
   }
 
 /* Read and construct Neutral species with + ionized counterpart */
 
-  p = (3+Chem->NGrain)*Chem->N_Neu_f+1;
+  p = 3*Chem->N_Neu_f+1;
   Chem->NeuInd = p; /* Starting index of normal neutrals */
 
   for (i=p; i<p+Chem->N_Neu; i++)
   {
     fscanf(fp, "%s", Chem->Species[i].name);
     fscanf(fp, "%lf\n", &(Chem->Species[i].Eb));    /* Binding energy */
+		ath_pout(0,"N_Neu= %s\n",Chem->Species[i].name);
     Chem->Species[i].gsize = 0.0;                   /* Not used */
     Chem->Species[i].type   = 1;
 
@@ -342,38 +324,18 @@ void init_species(Chemistry *Chem)
 
     Chem->Species[n].Eb = Chem->Species[i].Eb;
     Chem->Species[n].gsize = 0.0;     /* Not used */
-
-    /* Mantle counterpart */
-    for (k=0; k<Chem->NGrain; k++)
-    {
-      n = i+(k+2)*Chem->N_Neu;
-
-      sprintf(mantle, "[m%d]", k+1);
-      strcpy(Chem->Species[n].name, Chem->Species[i].name);
-      strcat(Chem->Species[n].name, mantle);
-
-      Chem->Species[n].mass = Chem->Species[i].mass;
-      Chem->Species[n].charge = Chem->Species[i].charge;
-      Chem->Species[n].type   = 4;
-
-      Chem->Species[n].numelem = Chem->Species[i].numelem;
-      for (j=0; j<Chem->N_Ele_tot; j++)
-        Chem->Species[n].composition[j] = Chem->Species[i].composition[j];
-
-      Chem->Species[n].Eb = Chem->Species[i].Eb;
-      Chem->Species[n].gsize = (Real)(-k-1); /* N.B.: indicator of associated grain type */
-    }
   }
 
 /* Read and construct species for Neutral species without ionized counterpart */
 
-  p = Chem->NeuInd + (2+Chem->NGrain)*Chem->N_Neu;
+  p = Chem->NeuInd + 2*Chem->N_Neu;
   Chem->SNeuInd = p; /* Starting index of special neutrals */
 
   for (i=p; i<p+Chem->N_Neu_s; i++)
   {
     fscanf(fp, "%s", Chem->Species[i].name);
     fscanf(fp, "%lf", &(Chem->Species[i].Eb));
+		ath_pout(0,"Neu_s= %s\n",Chem->Species[i].name);
     Chem->Species[i].gsize = 0.0;                   /* Not used */
     Chem->Species[n].type   = 1;
 
@@ -383,31 +345,11 @@ void init_species(Chemistry *Chem)
     /* Analyze the name of this species to obtain its compositon (IMPORTANT!) */
     Analyze(Chem, i);
 
-    /* Mantle counterpart */
-    for (k=0; k<Chem->NGrain; k++)
-    {
-      n = i+(k+1)*Chem->N_Neu_s;
-
-      sprintf(mantle, "[m%d]", k+1);
-      strcpy(Chem->Species[n].name, Chem->Species[i].name);
-      strcat(Chem->Species[n].name, mantle);
-
-      Chem->Species[n].mass = Chem->Species[i].mass;
-      Chem->Species[n].charge = Chem->Species[i].charge;
-      Chem->Species[n].type   = 4;
-
-      Chem->Species[n].numelem = Chem->Species[i].numelem;
-      for (j=0; j<Chem->N_Ele_tot; j++)
-        Chem->Species[n].composition[j] = Chem->Species[i].composition[j];
-
-      Chem->Species[n].Eb = Chem->Species[i].Eb;
-      Chem->Species[n].gsize = (Real)(-k-1); /* N.B.: indicator of associated grain type */
-    }
   }
 
 /* Read and construct ionized species without a neutral counterpart */
 
-  p = Chem->SNeuInd + (1+Chem->NGrain)*Chem->N_Neu_s;
+  p = Chem->SNeuInd + Chem->N_Neu_s;
   Chem->SIonInd = p; /* Starting index of special ions */
 
   for (i=p; i<p+Chem->N_Ion_s; i++)
@@ -464,6 +406,39 @@ void init_species(Chemistry *Chem)
     Chem->Elements[Chem->N_Ele+k].single[0] = n+Chem->GrCharge+1;
   }
 
+  /* Construct mantle species */
+  p = p + Chem->NGrain*(2*Chem->GrCharge+1);
+	for (i=1;i<=Chem->N_Neu_f + Chem->N_Neu + Chem->N_Neu_s; i++)
+  {
+		/* Find counterpart gas phase species index */
+		if(i<=Chem->N_Neu_f)
+			TmpInd = i;
+		else if (i<=Chem->N_Neu)
+			TmpInd = 2*Chem->N_Neu_f + i;
+		else
+			TmpInd = 2*Chem->N_Neu_f + Chem->N_Neu + i;
+
+    for (k=0; k<Chem->NGrain; k++)
+    {
+      n = i+p+k*(Chem->N_Neu_f+Chem->N_Neu+Chem->N_Neu_s);
+
+			sprintf(mantle, "[m%d]", k+1);
+			strcpy(Chem->Species[n].name, Chem->Species[TmpInd].name);
+			strcat(Chem->Species[n].name, mantle);
+
+			Chem->Species[n].mass = Chem->Species[TmpInd].mass;
+			Chem->Species[n].charge = Chem->Species[TmpInd].charge;
+			Chem->Species[n].type   = 4;
+
+			Chem->Species[n].numelem = Chem->Species[TmpInd].numelem;
+			for (j=0; j<Chem->N_Ele_tot; j++)
+				 Chem->Species[n].composition[j] = Chem->Species[TmpInd].composition[j];
+
+			Chem->Species[n].Eb = Chem->Species[TmpInd].Eb;
+			Chem->Species[n].gsize = (Real)(-k-1); // N.B.: indicator of associated grain type 
+    }
+	}
+
   fclose(fp);
 
 /*----------- Output All Species -------------*/
@@ -512,6 +487,7 @@ void Analyze(Chemistry *Chem, int i)
                         && (Chem->Species[i].name[p] != '+')
                         && (Chem->Species[i].name[p] != '-'))
   {
+		/* k is element index, l is species length*/
     k = FindElem(Chem, Chem->Species[i].name, p, &l);
     p += l;
     n = 1;
@@ -552,21 +528,21 @@ void Analyze(Chemistry *Chem, int i)
 /* If it is a neutral single-element species, tell the array Chem->Elements[] */
   if ((k == 1) && (Chem->Species[i].charge == 0))
   {
-    if (i<=(3+Chem->NGrain)*Chem->N_Neu_f) {
-      f=2; N_Neu=Chem->N_Neu_f;
-    } else {
-      f=1; N_Neu=Chem->N_Neu;
-    }
-
     n = Chem->Elements[l].numsig;
-    Chem->Elements[l].numsig += 1+Chem->NGrain;
-    Chem->Elements[l].single[n] = i;      /* Neutral single element */
+		// numsig is number of its single elements
+    Chem->Elements[l].numsig += 1;         //+Chem->NGrain;
+    Chem->Elements[l].single[n] = i;      // Neutral single element
 
-    /* Also include its mantle counterpart */
+    // Also include its mantle counterpart 
+		/*
+    p = Chem->GrInd + Chem->NGrain*(2*Chem->GrCharge+1);
+		ath_pout(0,"Mantle start : %s\n\n",Chem->Species[p].name);
     for (j=1; j<=Chem->NGrain; j++)
-      Chem->Elements[l].single[n+j] = i+(j+f)*N_Neu;
+      Chem->Elements[l].single[n+j] = p + f +
+				j*(Chem->N_Neu_f+Chem->N_Neu+Chem->N_Neu_s) ;
+		
 
-    /* if H2 is not the first single-element species, adjust the order */
+    // if H2 is not the first single-element species, adjust the order
     if ((strcmp(Chem->Species[i].name,"H2")==0) && (n>0))
     {
       Chem->Elements[l].single[n] = Chem->Elements[l].single[0];
@@ -578,7 +554,7 @@ void Analyze(Chemistry *Chem, int i)
       }
     }
 
-    /* if N2 is not the first single-element species, adjust the order */
+    // if N2 is not the first single-element species, adjust the order 
     if ((strcmp(Chem->Species[i].name,"N2")==0) && (n>0))
     {
       Chem->Elements[l].single[n] = Chem->Elements[l].single[0];
@@ -589,8 +565,8 @@ void Analyze(Chemistry *Chem, int i)
         Chem->Elements[l].single[j] = i+(j+f)*N_Neu;
       }
     }
+		*/
   }
-
   return;
 }
 

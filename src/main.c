@@ -85,13 +85,13 @@ for(k=zs;k<ze;k++){
   zeta_eff = Ionization_disk(&Disk,r,k/pts);
   Tg = Temp_disk(&Disk,r);	  // the temperature at 1AU
   rho = Rho_disk(&Disk,r,k/pts);	 //radius + height
-  verbose = k;
+  verbose = 1;
   /* choose all species for the output */
   ChemSet_allspecies(&Chem, &ChemOut);
   /* initialize the number density with single-element species */
   init_numberden(&Evln, rho, verbose);
   /* calculate the rate coefficients for all reactions */
-  IonizationCoeff(&Evln, zeta_eff,0.0,verbose); /* ionization reations */
+  IonizationCoeff(&Evln, zeta_eff,0.0,G,verbose); /* ionization reations */
   /* Ionization with G */
   CalCoeff       (&Evln, Tg, verbose);       /* all other reactions */
   /* evolve the network from 0 to tend */

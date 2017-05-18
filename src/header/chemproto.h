@@ -18,8 +18,7 @@
 
 /*----------------------------------------------------------------------------*/
 /* coeff.c */
-void IonizationCoeff(ChemEvln *Evln, Real zeta_eff, Real Av, int verbose);
-void IonizationCoeff1(ChemEvln *Evln, Real zeta_eff, Real Av,Real G, int verbose);
+void IonizationCoeff(ChemEvln *Evln, Real zeta_eff, Real Av, Real G, int verbose);
 void CalCoeff(ChemEvln *Evln, Real T, int verbose);
 void coeff_adj(ChemEvln *Evln);
 

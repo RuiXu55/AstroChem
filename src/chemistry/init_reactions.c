@@ -241,15 +241,15 @@ void init_reactions(Chemistry *Chem)
           InsertReactionInit(Chem);
           Chem->Reactions[n].rtype = 2;      /* Type is ion-grain reaction */
           Chem->Reactions[n].reactant[0] = j;      /* reactant 1: ion */
-          
-          if ((sgn==1) && (l==1))   /* X+ + gr(n+) -> X[m] + gr(n+1)+, n=0,1 */
-          {
-            Chem->Reactions[n].reactant[1] = m + i - 1;  /* reactant 2: grain */
-            Chem->Reactions[n].product[0] =
-                         j + (k+2)*Chem->N_Neu_f;  /* product 1: mantle species */
-            Chem->Reactions[n].product[1] = m + i;       /* product 2: grain */
-            Chem->Reactions[n].use = 1;
-          }
+                    
+          //if ((sgn==1) && (l==1))   /* X+ + gr(n+) -> X[m] + gr(n+1)+, n=0,1 */
+          //{
+          // Chem->Reactions[n].reactant[1] = m + i - 1;  /* reactant 2: grain */
+          // Chem->Reactions[n].product[0] =
+          //           j + (k+2)*Chem->N_Neu_f;  /* product 1: mantle species */
+          // Chem->Reactions[n].product[1] = m + i;       /* product 2: grain */
+          // Chem->Reactions[n].use = 1;
+          //}
 
           if ((sgn==-1) && (l==1))  /* X- + gr(n-) -> X[m] + gr(n+1)-, n=0,1 */
           {

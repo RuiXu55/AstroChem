@@ -162,6 +162,7 @@ void init_numberden(ChemEvln *Evln, Real rho, int verbose)
 	}else{
 
    /* Calculate abundance - number density ratio */
+	 ath_pout(0,"Init density from spe file!\n");
    sum = 0.0;
    for (i=0; i<Chem->N_Ele+Chem->NGrain; i++) {
      sum += Ele[i].mass * Ele[i].abundance;

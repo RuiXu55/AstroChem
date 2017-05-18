@@ -33,16 +33,19 @@ void init_chemistry(Chemistry *Chem)
   /* Read all elements, species and dust properties
    * Arrays of Elements, Species, GrSize, GrFrac, NumDen, DenScale are initiated
    */
+	ath_pout(0,"init species!\n");
   init_species(Chem);
 
   /* Real and construct all reaction equations
    * Arrays of Reactions and K are initiated
    */
+	ath_pout(0,"init reactions!\n");
   init_reactions(Chem);
 
   /* Construct chemical evolution equations 
    * The Equations array is initiated
    */
+	ath_pout(0,"init equations!\n");
   init_equations(Chem);
 
   return;

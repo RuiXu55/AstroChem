@@ -50,6 +50,7 @@ void init_equations(Chemistry *Chem)
 /* Memory allocation */
   Chem->Equations = (EquationInfo*)calloc_1d_array(Chem->Ntot,
                                                     sizeof(EquationInfo));
+	ath_pout(0,"chem-ntot: %d\n",Chem->Ntot);
   for (i=0; i<Chem->Ntot; i++)
   {
     Chem->Equations[i].NTerm = 0;
@@ -57,6 +58,7 @@ void init_equations(Chemistry *Chem)
     Chem->Equations[i].EqTerm = (EquationTerm*)calloc_1d_array(DNE,
                                                      sizeof(EquationTerm));
   }
+	ath_pout(0,"Construct equations\n");
 
 /* Construct equation */
   for (i=0; i<Chem->Ntot; i++)

@@ -48,7 +48,7 @@ int evolve(Real tend, Real dttry, Real abstol)
   for(i=0;i<Chem->Ntot;i++){
     NV_Ith_S(numden,i) = Evln.NumDen[i]; 
     NV_Ith_S(dndt,i) = 0.0;
-    //NV_Ith_S(vrtol,i) = 1.e0;///Evln.DenScale[i];
+    NV_Ith_S(vrtol,i) = 1.e0;///Evln.DenScale[i];
   }
 
   /* init CVode */ 

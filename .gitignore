@@ -3,9 +3,13 @@
 .dat
 .out
 .o
+.png
+.pdf
+.txt
 gtst/
 tst/
 obj/
 bin/
 tmp/
-Data/
+vis/
+input/

@@ -532,40 +532,6 @@ void Analyze(Chemistry *Chem, int i)
 		// numsig is number of its single elements
     Chem->Elements[l].numsig += 1;         //+Chem->NGrain;
     Chem->Elements[l].single[n] = i;      // Neutral single element
-
-    // Also include its mantle counterpart 
-		/*
-    p = Chem->GrInd + Chem->NGrain*(2*Chem->GrCharge+1);
-		ath_pout(0,"Mantle start : %s\n\n",Chem->Species[p].name);
-    for (j=1; j<=Chem->NGrain; j++)
-      Chem->Elements[l].single[n+j] = p + f +
-				j*(Chem->N_Neu_f+Chem->N_Neu+Chem->N_Neu_s) ;
-		
-
-    // if H2 is not the first single-element species, adjust the order
-    if ((strcmp(Chem->Species[i].name,"H2")==0) && (n>0))
-    {
-      Chem->Elements[l].single[n] = Chem->Elements[l].single[0];
-      Chem->Elements[l].single[0] = i;
-      for (j=1; j<=Chem->NGrain; j++)
-      {
-        Chem->Elements[l].single[n+j] = Chem->Elements[l].single[j];
-        Chem->Elements[l].single[j] = i+(j+f)*N_Neu;
-      }
-    }
-
-    // if N2 is not the first single-element species, adjust the order 
-    if ((strcmp(Chem->Species[i].name,"N2")==0) && (n>0))
-    {
-      Chem->Elements[l].single[n] = Chem->Elements[l].single[0];
-      Chem->Elements[l].single[0] = i;
-      for (j=1; j<=Chem->NGrain; j++)
-      {
-        Chem->Elements[l].single[n+j] = Chem->Elements[l].single[j];
-        Chem->Elements[l].single[j] = i+(j+f)*N_Neu;
-      }
-    }
-		*/
   }
   return;
 }

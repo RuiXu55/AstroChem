@@ -77,7 +77,6 @@ void init_species(Chemistry *Chem)
   int i, j, k, p, n,TmpInd;
   char line[MAXLEN],mantle[8],fname[20];
   Real sumgas, grtot, ratio;
-  ath_pout(0,"Read species begin!\n");
   sprintf(fname,"%s",par_gets("job","read_species"));
   fp = fopen(fname,"r");
 
@@ -114,7 +113,6 @@ void init_species(Chemistry *Chem)
 
   if (Chem->NGrain > 0) {
     Chem->GrSize   = (Real*)calloc_1d_array(Chem->NGrain, sizeof(Real));
-
     Chem->GrFrac   = (Real*)calloc_1d_array(Chem->NGrain, sizeof(Real));
   }
 
@@ -285,8 +283,6 @@ void init_species(Chemistry *Chem)
 
     Chem->Species[n].Eb = Chem->Species[i].Eb;
     Chem->Species[n].gsize = 0.0;     /* Not used */
-
-		ath_pout(0,"Neu_f= %s\n",Chem->Species[i].name);
   }
 
 /* Read and construct Neutral species with + ionized counterpart */
@@ -298,7 +294,6 @@ void init_species(Chemistry *Chem)
   {
     fscanf(fp, "%s", Chem->Species[i].name);
     fscanf(fp, "%lf\n", &(Chem->Species[i].Eb));    /* Binding energy */
-		ath_pout(0,"N_Neu= %s\n",Chem->Species[i].name);
     Chem->Species[i].gsize = 0.0;                   /* Not used */
     Chem->Species[i].type   = 1;
 
@@ -335,7 +330,6 @@ void init_species(Chemistry *Chem)
   {
     fscanf(fp, "%s", Chem->Species[i].name);
     fscanf(fp, "%lf", &(Chem->Species[i].Eb));
-		ath_pout(0,"Neu_s= %s\n",Chem->Species[i].name);
     Chem->Species[i].gsize = 0.0;                   /* Not used */
     Chem->Species[n].type   = 1;
 
@@ -344,7 +338,6 @@ void init_species(Chemistry *Chem)
 
     /* Analyze the name of this species to obtain its compositon (IMPORTANT!) */
     Analyze(Chem, i);
-
   }
 
 /* Read and construct ionized species without a neutral counterpart */
@@ -408,6 +401,7 @@ void init_species(Chemistry *Chem)
 
   /* Construct mantle species */
   p = p + Chem->NGrain*(2*Chem->GrCharge+1);
+  Chem->ManInd = p + 1;   /* Starting index for mantle species */
 	for (i=1;i<=Chem->N_Neu_f + Chem->N_Neu + Chem->N_Neu_s; i++)
   {
 		/* Find counterpart gas phase species index */
@@ -628,8 +622,6 @@ void OutputSpecies(Chemistry *Chem)
     ath_pout(0,"\n");
   }
   ath_pout(0,"\n");
- for(i=0;i<Chem->Ntot;i++)
-	ath_pout(0,"%s\n",Chem->Species[i].name);
 
   return;
 }

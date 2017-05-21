@@ -458,8 +458,8 @@ void init_reactions(Chemistry *Chem)
     }
   }
 
-  //for (j=Chem->NeuInd+2*Chem->N_Neu; j<Chem->NeuInd+3*Chem->N_Neu; j++)
-	for (j=Chem->ManInd+Chem->N_Neu_f; j<Chem->ManInd->Chem->N_Neu_f+Chem->N_Neu;j++)
+	//for (j=Chem->ManInd+Chem->N_Neu_f; j<Chem->ManInd->Chem->N_Neu_f+Chem->N_Neu;j++)
+  for (j=Chem->NeuInd+2*Chem->N_Neu; j<Chem->NeuInd+3*Chem->N_Neu; j++)
     for (k=0; k<Chem->NGrain; k++)
     {
       n = Chem->NReaction;

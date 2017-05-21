@@ -516,13 +516,17 @@ void Analyze(Chemistry *Chem, int i)
     p += l;
     n = 1;
 
-    if ((Chem->Species[i].name[p]>'1') && (Chem->Species[i].name[p]<='9'))
+    /* if the more than 10 elements in a species */
+    if (Chem->Species[i].name[p]=='1')
     {
-       n = Chem->Species[i].name[p]-'0';
-       p += 1;
-    }
-
-    Chem->Species[i].composition[k] += n;
+   	  n  = 10*(Chem->Species[i].name[p]-'0')+Chem->Species[i].name[p+1]-'0';
+      p += 2;
+	  }else if ((Chem->Species[i].name[p]>'1') && (Chem->Species[i].name[p]<='9'))
+    {
+     n = Chem->Species[i].name[p]-'0';
+     p += 1;
+   }
+   Chem->Species[i].composition[k] += n;
   }
 
   if (Chem->Species[i].name[p] == '+')
@@ -577,7 +581,6 @@ void Analyze(Chemistry *Chem, int i)
         Chem->Elements[l].single[j] = i+(j+f)*N_Neu;
       }
     }
-
     /* if N2 is not the first single-element species, adjust the order */
     if ((strcmp(Chem->Species[i].name,"N2")==0) && (n>0))
     {
@@ -617,10 +620,11 @@ int FindElem(Chemistry *Chem, char name[NL_SPE], int p, int *l)
     while ((i<Chem->N_Ele) && ((Chem->Elements[i].name[0] != name[p])
                            || (Chem->Elements[i].name[1] != '\0')))
       i++;
+
   }
 
   if (i == Chem->N_Ele)
-    ath_perr(-1, "[find_element]: Element not found in %s!\n", name);
+    ath_perr(-1, "[find_element]: Element not found in %s in %d for l=%d!\n", name,p,*l);
 
   return i;
 }
@@ -641,7 +645,7 @@ void OutputSpecies(Chemistry *Chem)
   ath_pout(0,"List of elements and their single-element species:\n");
   for (i=0; i<Chem->N_Ele; i++)
   {
-    ath_pout(0,"%7s:", Chem->Elements[i].name);
+    ath_pout(0,"%s:", Chem->Elements[i].name);
     for (j=0; j<Chem->Elements[i].numsig; j++)
     {
       k = Chem->Elements[i].single[j];

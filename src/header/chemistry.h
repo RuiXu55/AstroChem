@@ -15,7 +15,7 @@
 #ifdef CHEMISTRY
 
 #define NL_ELE 5   /* maximum # of letters for an element */
-#define NL_SPE 15  /* maximum # of letters for a species  */
+#define NL_SPE 20  /* maximum # of letters for a species  */
 #define NM_SIG 20  /* maximum # of single element species */
 
 #define OneYear 3.15576e7   /* one year in unit of second */

@@ -28,71 +28,110 @@ int ChargeMakeup ( Real dne);
 
 /* Functions Called by the Solver */
 static int f(realtype t, N_Vector u, N_Vector udot, void *user_data);
+static int f1(realtype t, N_Vector u, N_Vector udot, void *user_data);
 static int check_flag(void *flagvalue, char *funcname, int opt);
 
 /*============================================================================*/
 int evolve(Real tend, Real dttry, Real abstol)
 {
-  realtype t,reltol=1.e-6;
-  int flag, status,verbose,i;
-  N_Vector numden,dndt,vrtol;
-  void* cvode_mem;
+  realtype t, t1, t2, reltol=1.e-6;
+  int flag, status, verbose, i, Nsp;
+  N_Vector numden, dndt, vrtol, numden1, dndt1, vrtol1;
+  void *cvode_mem, *cvode_mem1;
   Chemistry *Chem = Evln.Chem;
-  numden = cvode_mem = NULL;
+  numden=numden1=cvode_mem=cvode_mem1 = NULL;
+  
+  Nsp = Chem->Ntot-Chem->N_Neu_f 
+		   -Chem->N_Neu-Chem->N_Neu_s;
 
-  dndt = N_VNew_Serial(Chem->Ntot);
-  numden = N_VNew_Serial(Chem->Ntot);
-  vrtol = N_VNew_Serial(Chem->Ntot);
+  dndt    = N_VNew_Serial(Nsp);
+  numden  = N_VNew_Serial(Nsp);
+  vrtol   = N_VNew_Serial(Nsp);
+
+  dndt1   = N_VNew_Serial(Chem->Ntot-Nsp);
+  numden1 = N_VNew_Serial(Chem->Ntot-Nsp);
+  vrtol1  = N_VNew_Serial(Chem->Ntot-Nsp);
 
   /* initialize number density for calculation */
-  for(i=0;i<Chem->Ntot;i++){
+  for(i=0;i<Nsp;i++){
     NV_Ith_S(numden,i) = Evln.NumDen[i]; 
-    NV_Ith_S(dndt,i) = 0.0;
-    //NV_Ith_S(vrtol,i) = 1.e0;///Evln.DenScale[i];
+    NV_Ith_S(dndt,i)   = 0.0;
+    NV_Ith_S(vrtol,i)  = 1.e0; //Evln.DenScale[i];
+  }
+
+  for(i=Nsp; i<Chem->Ntot; i++){
+    NV_Ith_S(numden1,i-Nsp) = Evln.NumDen[i]; 
+    NV_Ith_S(dndt1,  i-Nsp) = 0.0;
+    NV_Ith_S(vrtol1, i-Nsp) = 1.e0; //Evln.DenScale[i];
   }
 
   /* init CVode */ 
   cvode_mem = CVodeCreate(CV_BDF, CV_NEWTON);
   if(check_flag((void *)cvode_mem, "CVodeCreate", 0)) return(1);
 
-  flag = CVodeInit(cvode_mem,f,0.0,numden);
+  flag = CVodeInit(cvode_mem, f, 0.0, numden);
   if(check_flag(&flag,"CVodeInit", 1)) return(1);
 
-  //flag = CVodeSVtolerances(cvode_mem, abstol, vrtol);
-  //if (check_flag(&flag, "CVodeSVtolerances", 1)) return(1); 
   flag = CVodeSStolerances(cvode_mem, reltol, abstol);
   if (check_flag(&flag, "CVodeSStolerances", 1)) return(1);
 
-  flag = CVSpgmr(cvode_mem,PREC_LEFT,Chem->Ntot);
-  //flag = CVSpgmr(cvode_mem,PREC_RIGHT,Chem->Ntot);
+  flag = CVSpgmr(cvode_mem, PREC_LEFT, Nsp);
   flag = CVSpilsSetGSType(cvode_mem, MODIFIED_GS);
     if(check_flag(&flag, "CVSpilsSetGSType", 1)) return(1);
-  /* Set preconditioner setup and solve routines Precond and PSolve,
-     and the pointer to the user-defined block data */
-  //flag = CVSpilsSetPreconditioner(cvode_mem, Precond, PSolve);
-  //if(check_flag(&flag, "CVSpilsSetPreconditioner", 1)) return(1);
-  flag = CVBandPrecInit(cvode_mem,Chem->Ntot,Chem->Ntot,Chem->Ntot); //N, mu, ml
+  flag = CVBandPrecInit(cvode_mem,Nsp,Nsp,Nsp); //N, mu, ml
   if(check_flag(&flag,"CVBandPrecInit", 0)) return(1); 
   flag = CVodeSetMaxNumSteps(cvode_mem, 500000);
+
+
+  /*init second  
+	 * */ 
+  cvode_mem1 = CVodeCreate(CV_BDF, CV_NEWTON);
+  if(check_flag((void *)cvode_mem1, "CVodeCreate", 0)) return(1);
+
+  flag = CVodeInit(cvode_mem1, f1, 0.0, numden1);
+  if(check_flag(&flag,"CVodeInit", 1)) return(1);
+
+  flag = CVodeSStolerances(cvode_mem1, reltol, abstol);
+  if (check_flag(&flag, "CVodeSStolerances", 1)) return(1);
+
+  flag = CVSpgmr(cvode_mem1,PREC_LEFT, Chem->Ntot-Nsp);
+  flag = CVSpilsSetGSType(cvode_mem1, MODIFIED_GS);
+    if(check_flag(&flag, "CVSpilsSetGSType", 1)) return(1);
+  flag = CVBandPrecInit(cvode_mem1,
+		Chem->Ntot-Nsp,Chem->Ntot-Nsp,Chem->Ntot-Nsp); //N, mu, ml
+  if(check_flag(&flag,"CVBandPrecInit", 0)) return(1); 
+  flag = CVodeSetMaxNumSteps(cvode_mem1, 500000);
 
   clock_t c0, c1; /* Timing the code */
   c0 = clock();
   ath_pout(0,"\n Chemical evolution started...\n");
+
   verbose = 0;
   Evln.t = dttry;
+	t1     = Evln.t;
+
   while(Evln.t<tend)
   {
     //coeff_adj(&Evln);
     /* copy species number density to cvode to evolve */
-    for(i=0;i<Chem->Ntot;i++)
+    for(i=0;i<Nsp;i++)
       NV_Ith_S(numden,i) = Evln.NumDen[i];
     flag = CVode(cvode_mem,Evln.t, numden, &t, CV_NORMAL);
     Evln.t *= 1.2;
-    //Evln.t = MIN(1.2*Evln.t, 1e4*OneYear+Evln.t);
+
+		/*
+    for(i=Nsp;i<Chem->Ntot;i++)
+      NV_Ith_S(numden1,i-Nsp) = Evln.NumDen[i];
+    flag = CVode(cvode_mem1, t1, numden1, &t2, CV_NORMAL);
+    t1 *= 1.2;
+		*/
 
     /* copy species # density back and impose conservation */
-    for(i=0;i<Chem->Ntot;i++)
+    for(i=0; i<Nsp; i++)
       Evln.NumDen[i] = NV_Ith_S(numden,i);
+    for(i=Nsp; i<Chem->Ntot; i++)
+      Evln.NumDen[i] = NV_Ith_S(numden1,i-Nsp);
+
     ath_pout(0,"evolution time (yr) = %e\n",Evln.t/OneYear);
     status = EleMakeup(verbose);
 
@@ -106,8 +145,13 @@ int evolve(Real tend, Real dttry, Real abstol)
   N_VDestroy_Serial(dndt);
   N_VDestroy_Serial(numden);
   CVodeFree(&cvode_mem);
+
+  N_VDestroy_Serial(dndt1);
+  N_VDestroy_Serial(numden1);
+  CVodeFree(&cvode_mem1);
+
   ath_pout(0,"Evolution completed at t=%e yr, with Abn(e-)=%e.\n",
-     Evln.t/OneYear, Evln.NumDen[0]*Evln.Abn_Den);
+    Evln.t/OneYear, Evln.NumDen[0]*Evln.Abn_Den);
   return(0);
 }
 
@@ -117,10 +161,12 @@ int evolve(Real tend, Real dttry, Real abstol)
 
 static int f(realtype t, N_Vector numden, N_Vector dndt, void *user_data)
 {
-  int i, j, k, p;
+  int i, j, k, p, Nsp;
   Real sum,rate;
   EquationTerm *EqTerm;
-  for (k=0; k<Chem.Ntot; k++)
+  Nsp = Chem.Ntot-Chem.N_Neu_f 
+		   -Chem.N_Neu-Chem.N_Neu_s;
+  for (k=0; k<Nsp; k++)
   {
     sum  = 0.0;
     for (i=0; i<Chem.Equations[k].NTerm; i++)
@@ -139,6 +185,33 @@ static int f(realtype t, N_Vector numden, N_Vector dndt, void *user_data)
   return(0);
 }
 
+static int f1(realtype t1, N_Vector numden1, N_Vector dndt1, void *user_data)
+{
+  int i, j, k, p, Nsp;
+  Real sum,rate;
+  EquationTerm *EqTerm;
+  Nsp = Chem.Ntot-Chem.N_Neu_f 
+		   -Chem.N_Neu-Chem.N_Neu_s;
+
+  for (k=Nsp;k<Chem.Ntot;k++)
+  {
+    sum  = 0.0;
+    for (i=0; i<Chem.Equations[k].NTerm; i++)
+    {
+      EqTerm = &(Chem.Equations[k].EqTerm[i]);
+      rate = Evln.K[EqTerm->ind] * EqTerm->dir;
+      for (j=0; j<EqTerm->N; j++)
+      {
+        p = EqTerm->lab[j];
+        rate *= NV_Ith_S(numden1,p);
+      }
+      sum += rate;
+    }
+
+   NV_Ith_S(dndt1,k-Nsp) = sum;
+  }
+  return(0);
+}
 /*---------------------------------------------------------------------------*/
 /* Make up the element number density to enforce conservation laws
  */

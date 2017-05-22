@@ -444,9 +444,6 @@ void init_reactions(Chemistry *Chem)
       /* beta is binding energy */
       Chem->Reactions[n].coeff[0].beta = Chem->Species[j].Eb;
       Chem->Reactions[n].use = 1;
-
-      PrintReaction(Chem,n,k);
-			ath_pout(0,"adsorption!\n");
     }
 
   /* Desorption: Chem->N_Neu+NumSpecNeutral reactions */
@@ -491,9 +488,6 @@ void init_reactions(Chemistry *Chem)
       /* beta is binding energy */
       Chem->Reactions[n].coeff[0].beta = Chem->Species[j].Eb;
       Chem->Reactions[n].use = 1;
-
-      PrintReaction(Chem,n,k);
-			ath_pout(0,"desorption1!\n");
     }
 
 	for (j=Chem->ManInd+Chem->N_Neu_f+Chem->N_Neu; 

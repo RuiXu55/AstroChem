@@ -19,6 +19,17 @@
  *    CE    H2+   Mg    Mg+   H2   0    0    3.0E-9  0      0     1      100000
  *    RR    Mg+   e-    Mg    0    0    0    3.0E-11 -0.5   0     1      100000
  *
+ *    Reaction rtype
+ *    0  -- ionization
+ *    1  -- gas phase reactions
+ *    2  -- ion grain reactions
+ *    3  -- neutral grain reactions
+ *    4  -- desorption
+ *    5  -- grain grain reactions
+ *    6  -- grain surface reactions
+ *    7  -- mantle species as a product/not adsorption
+ *    10 -- photo reactions
+ *
  *  This code further construct all grain related reactions, termed into 
  *  different types. For details on reaction construction, see Bai & Goodman
  *  (2009).
@@ -247,6 +258,7 @@ void init_reactions(Chemistry *Chem)
                     
           if ((sgn==1) && (l==1))   // X+ + gr(n+) -> X[m] + gr(n+1)+, n=0,1
           {
+           Chem->Reactions[n].rtype = 7;      /* produce mantle species reaction */
            Chem->Reactions[n].reactant[1] = m + i - 1;  // reactant 2: grain 
            Chem->Reactions[n].product[0] =
                      j + k*(Chem->N_Neu_f+Chem->N_Neu+ 
@@ -257,6 +269,7 @@ void init_reactions(Chemistry *Chem)
 
           if ((sgn==-1) && (l==1))  /* X- + gr(n-) -> X[m] + gr(n+1)-, n=0,1 */
           {
+            Chem->Reactions[n].rtype = 7;      /* produce mantle species reaction */
             Chem->Reactions[n].reactant[1] = m - i + 1;  /* reactant 2: grain */
             Chem->Reactions[n].product[0] =
 								j + k*(Chem->N_Neu_f + Chem->N_Neu + 
@@ -310,6 +323,7 @@ void init_reactions(Chemistry *Chem)
 
           if (l == 1)	/* X+ + gr(n+) -> X[m] + gr(n+1)+, n=0,1 */
           {
+           Chem->Reactions[n].rtype = 7;      /* produce mantle species reaction */
            Chem->Reactions[n].reactant[1] = m + i - 1;  /* reactant 2: grain */
            Chem->Reactions[n].product[0] =
 						 (j-Chem->NeuInd-Chem->N_Neu)+ 

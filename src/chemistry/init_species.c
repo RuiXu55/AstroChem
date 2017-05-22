@@ -407,7 +407,7 @@ void init_species(Chemistry *Chem)
 		/* Find counterpart gas phase species index */
 		if(i<=Chem->N_Neu_f)
 			TmpInd = i;
-		else if (i<=Chem->N_Neu)
+		else if (i<=Chem->N_Neu+ Chem->N_Neu_f)
 			TmpInd = 2*Chem->N_Neu_f + i;
 		else
 			TmpInd = 2*Chem->N_Neu_f + Chem->N_Neu + i;

@@ -35,7 +35,7 @@ static int check_flag(void *flagvalue, char *funcname, int opt);
 int evolve(Real tend, Real dttry, Real abstol)
 {
   realtype t, t1, t2, reltol=1.e-6;
-  int flag, status, verbose, i, Nsp;
+  int flag, status, verbose, i, Nsp, Nsp1;
   N_Vector numden, dndt, vrtol, numden1, dndt1, vrtol1;
   void *cvode_mem, *cvode_mem1;
   Chemistry *Chem = Evln.Chem;
@@ -43,14 +43,15 @@ int evolve(Real tend, Real dttry, Real abstol)
   
   Nsp = Chem->Ntot-Chem->N_Neu_f 
 		   -Chem->N_Neu-Chem->N_Neu_s;
+  Nsp1 = (Chem->Ntot-Nsp)*2;
 
   dndt    = N_VNew_Serial(Nsp);
   numden  = N_VNew_Serial(Nsp);
   vrtol   = N_VNew_Serial(Nsp);
 
-  dndt1   = N_VNew_Serial(Chem->Ntot-Nsp);
-  numden1 = N_VNew_Serial(Chem->Ntot-Nsp);
-  vrtol1  = N_VNew_Serial(Chem->Ntot-Nsp);
+  dndt1   = N_VNew_Serial(Nsp1);
+  numden1 = N_VNew_Serial(Nsp1);
+  vrtol1  = N_VNew_Serial(Nsp1);
 
   /* initialize number density for calculation */
   for(i=0;i<Nsp;i++){
@@ -59,10 +60,10 @@ int evolve(Real tend, Real dttry, Real abstol)
     NV_Ith_S(vrtol,i)  = 1.e0; //Evln.DenScale[i];
   }
 
-  for(i=Nsp; i<Chem->Ntot; i++){
-    NV_Ith_S(numden1,i-Nsp) = Evln.NumDen[i]; 
-    NV_Ith_S(dndt1,  i-Nsp) = 0.0;
-    NV_Ith_S(vrtol1, i-Nsp) = 1.e0; //Evln.DenScale[i];
+  for(i=0; i<Nsp1; i++){
+    NV_Ith_S(numden1,i) = Evln.NumDen[i]; 
+    NV_Ith_S(dndt1,  i) = 0.0;
+    NV_Ith_S(vrtol1, i) = 1.e0; //Evln.DenScale[i];
   }
 
   /* init CVode */ 
@@ -119,12 +120,10 @@ int evolve(Real tend, Real dttry, Real abstol)
     flag = CVode(cvode_mem,Evln.t, numden, &t, CV_NORMAL);
     Evln.t *= 1.2;
 
-		/*
     for(i=Nsp;i<Chem->Ntot;i++)
       NV_Ith_S(numden1,i-Nsp) = Evln.NumDen[i];
     flag = CVode(cvode_mem1, t1, numden1, &t2, CV_NORMAL);
     t1 *= 1.2;
-		*/
 
     /* copy species # density back and impose conservation */
     for(i=0; i<Nsp; i++)

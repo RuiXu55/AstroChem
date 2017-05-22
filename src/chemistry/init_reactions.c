@@ -77,6 +77,7 @@ void init_reactions(Chemistry *Chem)
   char line[MAXLEN],name[NL_SPE],fname[20],mantle[NL_SPE];
   char name1[NL_SPE],name2[NL_SPE],name3[NL_SPE],name4[NL_SPE];
   Real coef;
+
   sprintf(fname,"%s",par_gets("job","read_reaction"));
   fp = fopen(fname,"r");
 
@@ -147,8 +148,10 @@ void init_reactions(Chemistry *Chem)
 
     Chem->Reactions[n].rtype = 1;   /* Type is gas-phase reaction */
     fscanf(fp, "%s", name);         /* sub-type */
+
     if (strcmp(name,"PH") == 0)     /* photo-reaction */
       Chem->Reactions[n].rtype = 10;
+
     fscanf(fp, "%s", name);
     Chem->Reactions[n].reactant[0] = FindSpecies(Chem, name); /* reactant 1 */
     fscanf(fp, "%s", name);
@@ -208,7 +211,7 @@ void init_reactions(Chemistry *Chem)
 
   for (k=0; k<Chem->NGrain; k++)
   {
-    m = Chem->GrInd + k * Ns_Gr;
+    m = Chem->GrInd + k * Ns_Gr;               /* Ns_Gr = 2*GrCharge+1 */
     for (i=1; i<=2*Chem->GrCharge; i++)
     {
       n = Chem->NReaction;
@@ -233,7 +236,7 @@ void init_reactions(Chemistry *Chem)
     for (k=0; k<Chem->NGrain; k++)
     {
       m = Chem->GrInd + Chem->GrCharge + k * Ns_Gr;
-      
+      // l==1  charge ++ or --, l==2 +- or -+
       for (l=1; l<=2; l++)
         for (i=1; i<=Chem->GrCharge; i++)
         {
@@ -242,12 +245,13 @@ void init_reactions(Chemistry *Chem)
           Chem->Reactions[n].rtype = 2;      /* Type is ion-grain reaction */
           Chem->Reactions[n].reactant[0] = j;      /* reactant 1: ion */
                     
-          if ((sgn==1) && (l==1))   /* X+ + gr(n+) -> X[m] + gr(n+1)+, n=0,1 */
+          if ((sgn==1) && (l==1))   // X+ + gr(n+) -> X[m] + gr(n+1)+, n=0,1
           {
-           Chem->Reactions[n].reactant[1] = m + i - 1;  /* reactant 2: grain */
+           Chem->Reactions[n].reactant[1] = m + i - 1;  // reactant 2: grain 
            Chem->Reactions[n].product[0] =
-                     j + (k+2)*Chem->N_Neu_f;  /* product 1: mantle species */
-           Chem->Reactions[n].product[1] = m + i;       /* product 2: grain */
+                     j + k*(Chem->N_Neu_f+Chem->N_Neu+ 
+										 Chem->N_Neu_s)+ Chem->ManInd;      // product 1: mantle species 
+           Chem->Reactions[n].product[1] = m + i;       // product 2: grain 
            Chem->Reactions[n].use = 1;
           }
 
@@ -255,7 +259,8 @@ void init_reactions(Chemistry *Chem)
           {
             Chem->Reactions[n].reactant[1] = m - i + 1;  /* reactant 2: grain */
             Chem->Reactions[n].product[0] =
-                         j + (k+1)*Chem->N_Neu_f;  /* product 1: mantle species */
+								j + k*(Chem->N_Neu_f + Chem->N_Neu + 
+								Chem->N_Neu_s)+Chem->ManInd;            /* product 1: mantle species */
             Chem->Reactions[n].product[1] = m - i;       /* product 2: grain */
             Chem->Reactions[n].use = 1;
           }
@@ -283,6 +288,7 @@ void init_reactions(Chemistry *Chem)
           /* beta is set to binding energy */
           Chem->Reactions[n].coeff[0].beta  = Chem->Species[j].Eb;
           Chem->Reactions[n].coeff[0].gamma = 1.0;       /* probability is 1 */
+
         }
       }
     }
@@ -306,7 +312,9 @@ void init_reactions(Chemistry *Chem)
           {
            Chem->Reactions[n].reactant[1] = m + i - 1;  /* reactant 2: grain */
            Chem->Reactions[n].product[0] =
-                      j + (k+1)*Chem->N_Neu;  /* product 1: mantle species */
+						 (j-Chem->NeuInd-Chem->N_Neu)+ 
+						 Chem->ManInd + Chem->N_Neu_f;     // product 1: mantle species 
+             //j + (k+1)*Chem->N_Neu;  /* product 1: mantle species */
            Chem->Reactions[n].product[1] = m + i;       /* product 2: grain */
            Chem->Reactions[n].use = 1;
           }
@@ -324,6 +332,7 @@ void init_reactions(Chemistry *Chem)
           /* beta is set to binding energy */
           Chem->Reactions[n].coeff[0].beta  = Chem->Species[j].Eb;
           Chem->Reactions[n].coeff[0].gamma = 1.0;       /* probability is 1 */
+
         }
     }
 
@@ -385,7 +394,8 @@ void init_reactions(Chemistry *Chem)
       Chem->Reactions[n].reactant[0] = j;      /* reactant 1: neutral */
       Chem->Reactions[n].reactant[1] = -k-1;   /* reactant 2: ALL GRAINS(k+1) */
       Chem->Reactions[n].product[0] =
-                       j + (k+3)*Chem->N_Neu_f;/* product 1: mantle species */
+                     j + k*(Chem->N_Neu_f+Chem->N_Neu+ 
+										 Chem->N_Neu_s)+ Chem->ManInd;      // product 1: mantle species 
       Chem->Reactions[n].product[1] = -k-1;    /* product 2: ALL GRAINS(k+1) */
                                                /* product 3-4: none */
       /* alpha is neutral mass! */
@@ -404,7 +414,7 @@ void init_reactions(Chemistry *Chem)
       Chem->Reactions[n].reactant[0] = j;      /* reactant 1: neutral */
       Chem->Reactions[n].reactant[1] = -k-1;   /* reactant 2: ALL GRAINS(k+1) */
       Chem->Reactions[n].product[0] =
-                       j + (k+2)*Chem->N_Neu;  /* product 1: mantle species */
+			  j-Chem->NeuInd+ Chem->ManInd + Chem->N_Neu_f;     // product 1: mantle species 
       Chem->Reactions[n].product[1] = -k-1;    /* product 2: ALL GRAINS(k+1) */
                                                /* product 3-4: none */
       /* alpha is neutral mass! */
@@ -425,7 +435,8 @@ void init_reactions(Chemistry *Chem)
       Chem->Reactions[n].reactant[0] = j;      /* reactant 1: neutral */
       Chem->Reactions[n].reactant[1] = -k-1;   /* reactant 2: ALL GRAINS(k+1) */
       Chem->Reactions[n].product[0] =
-                     j + (k+1)*Chem->N_Neu_s;  /* product 1: mantle species */
+				j-Chem->SNeuInd + Chem->ManInd + 
+				Chem->N_Neu_f + Chem->N_Neu;           /* product 1: mantle species */
       Chem->Reactions[n].product[1] = -k-1;    /* product 2: ALL GRAINS(k+1) */
                                                /* product 3-4: none */
       /* alpha is neutral mass! */
@@ -433,6 +444,9 @@ void init_reactions(Chemistry *Chem)
       /* beta is binding energy */
       Chem->Reactions[n].coeff[0].beta = Chem->Species[j].Eb;
       Chem->Reactions[n].use = 1;
+
+      PrintReaction(Chem,n,k);
+			ath_pout(0,"adsorption!\n");
     }
 
   /* Desorption: Chem->N_Neu+NumSpecNeutral reactions */
@@ -443,8 +457,8 @@ void init_reactions(Chemistry *Chem)
       n = Chem->NReaction;
       InsertReactionInit(Chem);
       Chem->Reactions[n].rtype = 4;           /* Type is desorption */
-      Chem->Reactions[n].reactant[0] =
-                        j + k*Chem->N_Neu_f;    /* reactant 1: mantle species */
+      Chem->Reactions[n].reactant[0] = 
+        j + k*(Chem->N_Neu_f+Chem->N_Neu+Chem->N_Neu_s);    /* reactant 1: mantle species */
       Chem->Reactions[n].reactant[1] = -k-1;  /* reactant 2: ALL GRAINS(k+1) */
       Chem->Reactions[n].product[0] = j - Chem->ManInd; /* product 1: neutral */
       Chem->Reactions[n].product[1] = -k-1;   /* product 2: ALL GRAINS(k+1) */
@@ -458,17 +472,18 @@ void init_reactions(Chemistry *Chem)
     }
   }
 
-	//for (j=Chem->ManInd+Chem->N_Neu_f; j<Chem->ManInd->Chem->N_Neu_f+Chem->N_Neu;j++)
-  for (j=Chem->NeuInd+2*Chem->N_Neu; j<Chem->NeuInd+3*Chem->N_Neu; j++)
+	for (j=Chem->ManInd+Chem->N_Neu_f; j<Chem->ManInd+Chem->N_Neu_f+Chem->N_Neu;j++)
     for (k=0; k<Chem->NGrain; k++)
     {
       n = Chem->NReaction;
       InsertReactionInit(Chem);
       Chem->Reactions[n].rtype = 4;           /* Type is desorption */
       Chem->Reactions[n].reactant[0] =
-                        j + k*Chem->N_Neu;    /* reactant 1: mantle species */
+				j+k*(Chem->N_Neu_f+Chem->N_Neu+Chem->N_Neu_s);  /* reactant 1: mantle species */
       Chem->Reactions[n].reactant[1] = -k-1;  /* reactant 2: ALL GRAINS(k+1) */
-      Chem->Reactions[n].product[0] = j - 2*Chem->N_Neu;/* product 1: neutral */
+      Chem->Reactions[n].product[0] = 
+				j - Chem->ManInd-Chem->N_Neu_f 
+				+ 2*Chem->N_Neu_f+1; /* product 1: neutral */
       Chem->Reactions[n].product[1] = -k-1;   /* product 2: ALL GRAINS(k+1) */
                                               /* product 3-4: none */
       /* alpha is neutral mass! */
@@ -477,20 +492,23 @@ void init_reactions(Chemistry *Chem)
       Chem->Reactions[n].coeff[0].beta = Chem->Species[j].Eb;
       Chem->Reactions[n].use = 1;
 
-      PrintReaction(Chem,n,Chem->Reactions[n].coeff[0].alpha);
-			ath_pout(0,"check desorption reaction \n!");
+      PrintReaction(Chem,n,k);
+			ath_pout(0,"desorption1!\n");
     }
 
-  for (j=Chem->SNeuInd+Chem->N_Neu_s; j<Chem->SNeuInd+2*Chem->N_Neu_s; j++)
+	for (j=Chem->ManInd+Chem->N_Neu_f+Chem->N_Neu; 
+			j<Chem->ManInd+Chem->N_Neu_f+Chem->N_Neu+Chem->N_Neu_s;j++)
     for (k=0; k<Chem->NGrain; k++)
     {
       n = Chem->NReaction;
       InsertReactionInit(Chem);
       Chem->Reactions[n].rtype = 4;           /* Type is desorption */
       Chem->Reactions[n].reactant[0] =
-                        j + k*Chem->N_Neu_s;  /* reactant 1: mantle species */
+				j+k*(Chem->N_Neu_f+Chem->N_Neu+Chem->N_Neu_s);  /* reactant 1: mantle species */
       Chem->Reactions[n].reactant[1] = -k-1;  /* reactant 2: ALL GRAINS(k+1) */
-      Chem->Reactions[n].product[0] = j - Chem->N_Neu_s;/* product 1: neutral */
+      Chem->Reactions[n].product[0] =
+				j - Chem->ManInd-Chem->N_Neu_f + 
+				2*Chem->N_Neu_f+Chem->N_Neu+1; /* product 1: neutral */
       Chem->Reactions[n].product[1] = -k-1;   /* product 2: ALL GRAINS(k+1) */
                                               /* product 3-4: none */
       /* alpha is neutral mass! */
@@ -498,6 +516,7 @@ void init_reactions(Chemistry *Chem)
       /* beta is binding energy */
       Chem->Reactions[n].coeff[0].beta = Chem->Species[j].Eb;
       Chem->Reactions[n].use = 1;
+
     }
 
   /* Grain-Grain reaction: Chem->GrCharge * Chem->GrCharge reactions */

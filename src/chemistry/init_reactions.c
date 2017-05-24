@@ -251,60 +251,66 @@ void init_reactions(Chemistry *Chem)
       for (l=1; l<=2; l++)
         for (i=1; i<=Chem->GrCharge; i++)
         {
-          n = Chem->NReaction;
-          InsertReactionInit(Chem);
-          Chem->Reactions[n].rtype = 2;      /* Type is ion-grain reaction */
-          Chem->Reactions[n].reactant[0] = j;      /* reactant 1: ion */
+          if (((sgn==-1) && (l==1)) || ((sgn==1) && (l==1))) 
+					{
+					  // X- + gr(n-) -> X[m] + gr(n+1)-, n=0,1 
+						/*
+						if ((sgn==-1) && (l==1))  // X- + gr(n-) -> X[m] + gr(n+1)-, n=0,1 
+						{
+							Chem->Reactions[n].rtype = 7;      // produce mantle species reaction 
+							Chem->Reactions[n].reactant[1] = m - i + 1;  // reactant 2: grain 
+							Chem->Reactions[n].product[0] =
+									j + k*(Chem->N_Neu_f + Chem->N_Neu + 
+									Chem->N_Neu_s)+Chem->ManInd;            // product 1: mantle species 
+							Chem->Reactions[n].product[1] = m - i;       // product 2: grain 
+							Chem->Reactions[n].use = 1;
+						}
+            if ((sgn==1) && (l==1))   // X+ + gr(n+) -> X[m] + gr(n+1)+, n=0,1
+						{
+						 Chem->Reactions[n].rtype = 7;      // produce mantle species reaction 
+						 Chem->Reactions[n].reactant[1] = m + i - 1;  // reactant 2: grain 
+						 Chem->Reactions[n].product[0] =
+											 j + k*(Chem->N_Neu_f+Chem->N_Neu+ 
+											 Chem->N_Neu_s)+ Chem->ManInd;      // product 1: mantle species 
+						 Chem->Reactions[n].product[1] = m + i;       // product 2: grain 
+						 Chem->Reactions[n].use = 1;
+						}
+						*/
+						ath_pout(0,"This ion-grain reaction is not included!\n");
+					}else{
+						n = Chem->NReaction;
+						InsertReactionInit(Chem);
+						Chem->Reactions[n].rtype = 2;      /* Type is ion-grain reaction */
+						Chem->Reactions[n].reactant[0] = j;      /* reactant 1: ion */
                     
-          if ((sgn==1) && (l==1))   // X+ + gr(n+) -> X[m] + gr(n+1)+, n=0,1
-          {
-           Chem->Reactions[n].rtype = 7;      /* produce mantle species reaction */
-           Chem->Reactions[n].reactant[1] = m + i - 1;  // reactant 2: grain 
-           Chem->Reactions[n].product[0] =
-                     j + k*(Chem->N_Neu_f+Chem->N_Neu+ 
-										 Chem->N_Neu_s)+ Chem->ManInd;      // product 1: mantle species 
-           Chem->Reactions[n].product[1] = m + i;       // product 2: grain 
-           Chem->Reactions[n].use = 1;
-          }
+						if ((sgn==1) && (l==2))   /* X+ + gr(n-) -> X + gr(n-1)-, n=1,2 */
+						{
+							Chem->Reactions[n].reactant[1] = m - i;      /* reactant 2: grain */
+							Chem->Reactions[n].product[0] =
+													 j - Chem->N_Neu_f;   /* product 1: neutral counterpart */
+							Chem->Reactions[n].product[1] = m - i + 1;   /* product 2: grain */
+							Chem->Reactions[n].use = 1;
+						}
 
-          if ((sgn==-1) && (l==1))  /* X- + gr(n-) -> X[m] + gr(n+1)-, n=0,1 */
-          {
-            Chem->Reactions[n].rtype = 7;      /* produce mantle species reaction */
-            Chem->Reactions[n].reactant[1] = m - i + 1;  /* reactant 2: grain */
-            Chem->Reactions[n].product[0] =
-								j + k*(Chem->N_Neu_f + Chem->N_Neu + 
-								Chem->N_Neu_s)+Chem->ManInd;            /* product 1: mantle species */
-            Chem->Reactions[n].product[1] = m - i;       /* product 2: grain */
-            Chem->Reactions[n].use = 1;
-          }
+						if ((sgn==-1) && (l==2))   /* X- + gr(n+) -> X + gr(n-1)+, n=1,2 */
+						{
+							Chem->Reactions[n].reactant[1] = m + i;      /* reactant 2: grain */
+							Chem->Reactions[n].product[0] =
+													 j - 2*Chem->N_Neu_f; /* product 1: neutral counterpart */
+							Chem->Reactions[n].product[1] = m + i - 1;   /* product 2: grain */
+							Chem->Reactions[n].use = 1;
+						}
 
-          if ((sgn==1) && (l==2))   /* X+ + gr(n-) -> X + gr(n-1)-, n=1,2 */
-          {
-            Chem->Reactions[n].reactant[1] = m - i;      /* reactant 2: grain */
-            Chem->Reactions[n].product[0] =
-                         j - Chem->N_Neu_f;   /* product 1: neutral counterpart */
-            Chem->Reactions[n].product[1] = m - i + 1;   /* product 2: grain */
-            Chem->Reactions[n].use = 1;
-          }
+						/* alpha is set to ion mass! */
+						Chem->Reactions[n].coeff[0].alpha = Chem->Species[j].mass;
+						/* beta is set to binding energy */
+						Chem->Reactions[n].coeff[0].beta  = Chem->Species[j].Eb;
+						Chem->Reactions[n].coeff[0].gamma = 1.0;       /* probability is 1 */
+					}
 
-          if ((sgn==-1) && (l==2))   /* X- + gr(n+) -> X + gr(n-1)+, n=1,2 */
-          {
-            Chem->Reactions[n].reactant[1] = m + i;      /* reactant 2: grain */
-            Chem->Reactions[n].product[0] =
-                         j - 2*Chem->N_Neu_f; /* product 1: neutral counterpart */
-            Chem->Reactions[n].product[1] = m + i - 1;   /* product 2: grain */
-            Chem->Reactions[n].use = 1;
-          }
-
-          /* alpha is set to ion mass! */
-          Chem->Reactions[n].coeff[0].alpha = Chem->Species[j].mass;
-          /* beta is set to binding energy */
-          Chem->Reactions[n].coeff[0].beta  = Chem->Species[j].Eb;
-          Chem->Reactions[n].coeff[0].gamma = 1.0;       /* probability is 1 */
-
-        }
-      }
-    }
+				}// end i
+      }// end k
+    }//end j
 
   /* Ion + gr(n+): Chem->N_Neu * 3 * Chem->GrCharge reactions */
 
@@ -316,39 +322,45 @@ void init_reactions(Chemistry *Chem)
       for (l=1; l<=2; l++)
         for (i=1; i<=Chem->GrCharge; i++)
         {
-          n = Chem->NReaction;
-          InsertReactionInit(Chem);
-          Chem->Reactions[n].rtype = 2;      /* Type is ion-grain reaction */
-          Chem->Reactions[n].reactant[0] = j;      /* reactant 1: ion */
+          if (l == 1)	// X+ + gr(n+) -> X[m] + gr(n+1)+, n=0,1 
+					{
+						ath_pout(0,"This ion-grain reaction is not included!\n");
+						/*
+						if (l == 1)	// X+ + gr(n+) -> X[m] + gr(n+1)+, n=0,1 
+						{
+						 Chem->Reactions[n].rtype = 7;      // produce mantle species reaction 
+						 Chem->Reactions[n].reactant[1] = m + i - 1;  // reactant 2: grain
+						 Chem->Reactions[n].product[0] =
+							 (j-Chem->NeuInd-Chem->N_Neu)+ 
+							 Chem->ManInd + Chem->N_Neu_f;     // product 1: mantle species 
+							 //j + (k+1)*Chem->N_Neu;  // product 1: mantle species 
+						 Chem->Reactions[n].product[1] = m + i;       // product 2: grain 
+						 Chem->Reactions[n].use = 1;
+						}
+						*/
+					}else{
+						n = Chem->NReaction;
+						InsertReactionInit(Chem);
+						Chem->Reactions[n].rtype = 2;      /* Type is ion-grain reaction */
+						Chem->Reactions[n].reactant[0] = j;      /* reactant 1: ion */
 
-          if (l == 1)	/* X+ + gr(n+) -> X[m] + gr(n+1)+, n=0,1 */
-          {
-           Chem->Reactions[n].rtype = 7;      /* produce mantle species reaction */
-           Chem->Reactions[n].reactant[1] = m + i - 1;  /* reactant 2: grain */
-           Chem->Reactions[n].product[0] =
-						 (j-Chem->NeuInd-Chem->N_Neu)+ 
-						 Chem->ManInd + Chem->N_Neu_f;     // product 1: mantle species 
-             //j + (k+1)*Chem->N_Neu;  /* product 1: mantle species */
-           Chem->Reactions[n].product[1] = m + i;       /* product 2: grain */
-           Chem->Reactions[n].use = 1;
-          }
 
-          if (l == 2)	/* X+ + gr(n-) -> X + gr(n-1)-, n=1,2 */
-          {
-            Chem->Reactions[n].reactant[1] = m - i;      /* reactant 2: grain */
-            Chem->Reactions[n].product[0] =
-                         j - Chem->N_Neu;   /* product 1: neutral counterpart */
-            Chem->Reactions[n].product[1] = m - i + 1;   /* product 2: grain */
-            Chem->Reactions[n].use = 1;
-          }                                              /* product 3-4: none */
-          /* alpha is set to ion mass! */
-          Chem->Reactions[n].coeff[0].alpha = Chem->Species[j].mass;
-          /* beta is set to binding energy */
-          Chem->Reactions[n].coeff[0].beta  = Chem->Species[j].Eb;
-          Chem->Reactions[n].coeff[0].gamma = 1.0;       /* probability is 1 */
-
-        }
-    }
+						if (l == 2)	/* X+ + gr(n-) -> X + gr(n-1)-, n=1,2 */
+						{
+							Chem->Reactions[n].reactant[1] = m - i;      /* reactant 2: grain */
+							Chem->Reactions[n].product[0] =
+													 j - Chem->N_Neu;   /* product 1: neutral counterpart */
+							Chem->Reactions[n].product[1] = m - i + 1;   /* product 2: grain */
+							Chem->Reactions[n].use = 1;
+						}                                              /* product 3-4: none */
+						/* alpha is set to ion mass! */
+						Chem->Reactions[n].coeff[0].alpha = Chem->Species[j].mass;
+						/* beta is set to binding energy */
+						Chem->Reactions[n].coeff[0].beta  = Chem->Species[j].Eb;
+						Chem->Reactions[n].coeff[0].gamma = 1.0;       /* probability is 1 */
+					} // end if l==1
+				} //end i
+    }//end k
 
   /* Ion with no neutral counterpart + gr(n-): NumSpeCharge * Chem->GrCharge
    * reactions */

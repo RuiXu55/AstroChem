@@ -129,6 +129,7 @@ void InsertTerm(Chemistry *Chem, int a, int nreactant, int k, int sign)
 
   Eq->EqTerm[m].ind = k;
   Eq->EqTerm[m].dir = sign;
+  Eq->EqTerm[m].type = Chem->Reactions[k].rtype;
 
   return;
 }

@@ -102,6 +102,7 @@ typedef struct EquationTerm_s {
   int N;               /* Number of species involved (<=3) */
   int lab[3];          /* The label of the species */
   int dir;             /* Reactant (-1) or Product (1) */
+  int type;             /* corresponds to the reaction type */
 
 }EquationTerm;
 

@@ -22,9 +22,8 @@ SRC_FILES  := $(wildcard src/chemistry/*.c)\
               $(wildcard src/*.c)
 OBJ_DIR    := obj/
 OBJ_FILES  := $(addprefix $(OBJ_DIR), $(notdir $(SRC_FILES:.c=.o)))
-SRC_DIR    := $(dir $(SRC_FILES) $(PROB_FILES))
+SRC_DIR    := $(dir $(SRC_FILES))
 VPATH      := $(SRC_DIR)
-
 
 .PHONY : all dirs clean
 
@@ -52,5 +51,4 @@ $(EXECUTABLE) : $(OBJ_FILES)
 clean :
 	rm -rf $(OBJ_DIR)*
 	rm -rf $(EXECUTABLE)
-
 

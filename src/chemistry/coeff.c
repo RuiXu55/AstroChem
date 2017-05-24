@@ -119,8 +119,6 @@ void CalCoeff(ChemEvln *Evln, Real T, int verbose)
       case 1: K = ChemCoeff(Chem->Reactions[i].coeff, T, 
                             Chem->Reactions[i].NumTRange);
               break;
-      /* Photo-reactions */
-      case 10: break;
       /* Charge+grain Reaction */
       case 2: K = IonGrCoeff(Chem, i, T);
               break;
@@ -136,6 +134,8 @@ void CalCoeff(ChemEvln *Evln, Real T, int verbose)
       /* Grain-surface reaction */
       case 6: K = GrSurfCoeff(Evln, i, T);
               break;
+      /* Photo-reactions */
+      case 10: break;
       default : ath_error("[coefficients]: reaction type should be 0-6!\n");
     }
 

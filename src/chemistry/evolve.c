@@ -35,35 +35,31 @@ static int check_flag(void *flagvalue, char *funcname, int opt);
 int evolve(Real tend, Real dttry, Real abstol)
 {
   realtype t, t1, t2, reltol=1.e-6;
-  int flag, status, verbose, i, Nsp, Nsp1;
-  N_Vector numden, dndt, vrtol, numden1, dndt1, vrtol1;
+  int flag, status, verbose, i, k,Nsp, Nsp1,p;
+  N_Vector numden, dndt, numden1, dndt1 ;
   void *cvode_mem, *cvode_mem1;
   Chemistry *Chem = Evln.Chem;
   numden=numden1=cvode_mem=cvode_mem1 = NULL;
   
   Nsp = Chem->Ntot-Chem->N_Neu_f 
-		   -Chem->N_Neu-Chem->N_Neu_s;
-  Nsp1 = (Chem->Ntot-Nsp)*2;
+		   -Chem->N_Neu-Chem->N_Neu_s; // # of non-mantle spcies
+  Nsp1 = Chem->NGrain*(Chem->Ntot-Nsp)*2; // mantle and their neutral counterpart
 
   dndt    = N_VNew_Serial(Nsp);
   numden  = N_VNew_Serial(Nsp);
-  vrtol   = N_VNew_Serial(Nsp);
 
   dndt1   = N_VNew_Serial(Nsp1);
   numden1 = N_VNew_Serial(Nsp1);
-  vrtol1  = N_VNew_Serial(Nsp1);
 
   /* initialize number density for calculation */
   for(i=0;i<Nsp;i++){
     NV_Ith_S(numden,i) = Evln.NumDen[i]; 
     NV_Ith_S(dndt,i)   = 0.0;
-    NV_Ith_S(vrtol,i)  = 1.e0; //Evln.DenScale[i];
   }
 
   for(i=0; i<Nsp1; i++){
-    NV_Ith_S(numden1,i) = Evln.NumDen[i]; 
+    NV_Ith_S(numden1,i) = 0.0;
     NV_Ith_S(dndt1,  i) = 0.0;
-    NV_Ith_S(vrtol1, i) = 1.e0; //Evln.DenScale[i];
   }
 
   /* init CVode */ 
@@ -95,11 +91,10 @@ int evolve(Real tend, Real dttry, Real abstol)
   flag = CVodeSStolerances(cvode_mem1, reltol, abstol);
   if (check_flag(&flag, "CVodeSStolerances", 1)) return(1);
 
-  flag = CVSpgmr(cvode_mem1,PREC_LEFT, Chem->Ntot-Nsp);
+  flag = CVSpgmr(cvode_mem1,PREC_LEFT, Nsp1);
   flag = CVSpilsSetGSType(cvode_mem1, MODIFIED_GS);
     if(check_flag(&flag, "CVSpilsSetGSType", 1)) return(1);
-  flag = CVBandPrecInit(cvode_mem1,
-		Chem->Ntot-Nsp,Chem->Ntot-Nsp,Chem->Ntot-Nsp); //N, mu, ml
+  flag = CVBandPrecInit(cvode_mem1,Nsp1,Nsp1,Nsp1);
   if(check_flag(&flag,"CVBandPrecInit", 0)) return(1); 
   flag = CVodeSetMaxNumSteps(cvode_mem1, 500000);
 
@@ -117,22 +112,67 @@ int evolve(Real tend, Real dttry, Real abstol)
     /* copy species number density to cvode to evolve */
     for(i=0;i<Nsp;i++)
       NV_Ith_S(numden,i) = Evln.NumDen[i];
-    flag = CVode(cvode_mem,Evln.t, numden, &t, CV_NORMAL);
-    Evln.t *= 1.2;
 
-    for(i=Nsp;i<Chem->Ntot;i++)
-      NV_Ith_S(numden1,i-Nsp) = Evln.NumDen[i];
+    flag = CVode(cvode_mem,Evln.t, numden, &t, CV_NORMAL);
+    Evln.t *= 1.5;
+
+    for(i=0;i<Nsp;i++)
+      Evln.NumDen[i] = NV_Ith_S(numden,i);
+
+    /* copy # density for adsorption/desorption*/
+    for(i=1;i<=Nsp1/Chem->NGrain;i++)
+		{
+			if (i<=Chem->N_Neu_f)
+			{
+				p = i;
+        NV_Ith_S(numden1,i) = Evln.NumDen[p];
+		  }
+		  else if (i<=(Chem->N_Neu_f + Chem->N_Neu)){
+				p = i+2*Chem->N_Neu_f;
+        NV_Ith_S(numden1,i) = Evln.NumDen[p];
+			}
+			else if (i<=(Chem->N_Neu_f + Chem->N_Neu+Chem->N_Neu_s)){
+				p = i+2*Chem->N_Neu_f + Chem->N_Neu;
+        NV_Ith_S(numden1,i) = Evln.NumDen[p];
+			}
+		  else
+				for (k=0;k<Chem->NGrain;k++){
+				  p = i-1+Chem->ManInd +(k-1)*(Chem->Ntot-Nsp);
+          NV_Ith_S(numden1,i) = Evln.NumDen[p];
+				}
+    }
+
     flag = CVode(cvode_mem1, t1, numden1, &t2, CV_NORMAL);
-    t1 *= 1.2;
+    t1 *= 1.5;
+
+    for(i=1;i<=Nsp1/Chem->NGrain;i++)
+		{
+			if (i<=Chem->N_Neu_f)
+			{
+				p = i;
+        Evln.NumDen[p] = NV_Ith_S(numden1,i);
+		  }
+		  else if (i<=(Chem->N_Neu_f + Chem->N_Neu)){
+				p = i+2*Chem->N_Neu_f;
+        Evln.NumDen[p] = NV_Ith_S(numden1,i);
+			}
+			else if (i<=(Chem->N_Neu_f + Chem->N_Neu+Chem->N_Neu_s)){
+				p = i+2*Chem->N_Neu_f + Chem->N_Neu;
+        Evln.NumDen[p] = NV_Ith_S(numden1,i);
+			}
+		  else
+				for (k=0;k<Chem->NGrain;k++){
+				  p = i-1+Chem->ManInd +(k-1)*(Chem->Ntot-Nsp);
+          Evln.NumDen[p] = NV_Ith_S(numden1,i);
+				}
+    }
+
+		for (i=0;i<Chem->Ntot;i++)
+			ath_pout(0,"sp=%s, # = %4.4f\n",Chem->Species[i].name,Evln.NumDen[i]);
 
     /* copy species # density back and impose conservation */
-    for(i=0; i<Nsp; i++)
-      Evln.NumDen[i] = NV_Ith_S(numden,i);
-    for(i=Nsp; i<Chem->Ntot; i++)
-      Evln.NumDen[i] = NV_Ith_S(numden1,i-Nsp);
-
-    ath_pout(0,"evolution time (yr) = %e\n",Evln.t/OneYear);
-    status = EleMakeup(verbose);
+    //ath_pout(0,"evolution time (yr) = %e\n",Evln.t/OneYear);
+    //status = EleMakeup(verbose);
 
     /* ends if evolution time is too large */
     c1 = clock();
@@ -144,7 +184,6 @@ int evolve(Real tend, Real dttry, Real abstol)
   N_VDestroy_Serial(dndt);
   N_VDestroy_Serial(numden);
   CVodeFree(&cvode_mem);
-
   N_VDestroy_Serial(dndt1);
   N_VDestroy_Serial(numden1);
   CVodeFree(&cvode_mem1);
@@ -165,19 +204,22 @@ static int f(realtype t, N_Vector numden, N_Vector dndt, void *user_data)
   EquationTerm *EqTerm;
   Nsp = Chem.Ntot-Chem.N_Neu_f 
 		   -Chem.N_Neu-Chem.N_Neu_s;
+
   for (k=0; k<Nsp; k++)
   {
     sum  = 0.0;
     for (i=0; i<Chem.Equations[k].NTerm; i++)
     {
       EqTerm = &(Chem.Equations[k].EqTerm[i]);
-      rate = Evln.K[EqTerm->ind] * EqTerm->dir;
-      for (j=0; j<EqTerm->N; j++)
-      {
-        p = EqTerm->lab[j];
-        rate *= NV_Ith_S(numden,p);
-      }
-      sum += rate;
+			if ((EqTerm->type) != 3 && (EqTerm->type !=4)){
+        rate = Evln.K[EqTerm->ind] * EqTerm->dir;
+        for (j=0; j<EqTerm->N; j++)
+        {
+          p = EqTerm->lab[j];
+          rate *= NV_Ith_S(numden,p);
+        }
+        sum += rate;
+			}
     }
    NV_Ith_S(dndt,k) = sum;
   }
@@ -186,29 +228,58 @@ static int f(realtype t, N_Vector numden, N_Vector dndt, void *user_data)
 
 static int f1(realtype t1, N_Vector numden1, N_Vector dndt1, void *user_data)
 {
-  int i, j, k, p, Nsp;
+  int i, j, k, p, Nsp1,Nsp;
   Real sum,rate;
   EquationTerm *EqTerm;
   Nsp = Chem.Ntot-Chem.N_Neu_f 
 		   -Chem.N_Neu-Chem.N_Neu_s;
+  Nsp1 = Chem.NGrain*(Chem.Ntot-Nsp)*2;
 
-  for (k=Nsp;k<Chem.Ntot;k++)
+  for(k=1;k<=Nsp1/Chem.NGrain;k++)
   {
-    sum  = 0.0;
-    for (i=0; i<Chem.Equations[k].NTerm; i++)
-    {
-      EqTerm = &(Chem.Equations[k].EqTerm[i]);
-      rate = Evln.K[EqTerm->ind] * EqTerm->dir;
-      for (j=0; j<EqTerm->N; j++)
-      {
-        p = EqTerm->lab[j];
-        rate *= NV_Ith_S(numden1,p);
-      }
-      sum += rate;
-    }
+    if (k<=Chem.N_Neu_f)
+		  p = k;
+		else if (k<=(Chem.N_Neu_f + Chem.N_Neu))
+  		p = k+2*Chem.N_Neu_f;
+		else if (k<=(Chem.N_Neu_f + Chem.N_Neu+Chem.N_Neu_s))
+			p = k+2*Chem.N_Neu_f + Chem.N_Neu;
 
-   NV_Ith_S(dndt1,k-Nsp) = sum;
-  }
+    sum  = 0.0;
+    for (i=0; i<Chem.Equations[p].NTerm; i++)
+    {
+      EqTerm = &(Chem.Equations[p].EqTerm[i]);
+			if ((EqTerm->type) == 3 || (EqTerm->type ==4)){
+        rate = Evln.K[EqTerm->ind] * EqTerm->dir;
+        for (j=0; j<EqTerm->N; j++)
+        {
+          p = EqTerm->lab[j];
+          rate *= NV_Ith_S(numden1,k);
+        }
+        sum += rate;
+			}
+    }
+   NV_Ith_S(dndt1,k) = sum;
+	}
+
+  for(k=1;k<=Nsp1/Chem.NGrain;k++)
+    for (j=0;j<Chem.NGrain;j++){
+		  p = k-1+Chem.ManInd +(j-1)*(Chem.Ntot-Nsp);
+      sum  = 0.0;
+      for (i=0; i<Chem.Equations[p].NTerm; i++)
+      {
+        EqTerm = &(Chem.Equations[p].EqTerm[i]);
+			  if ((EqTerm->type) == 3 || (EqTerm->type ==4)){
+          rate = Evln.K[EqTerm->ind] * EqTerm->dir;
+          for (j=0; j<EqTerm->N; j++)
+          {
+            p = EqTerm->lab[j];
+            rate *= NV_Ith_S(numden1,k);
+          }
+          sum += rate;
+			  }
+      }
+      NV_Ith_S(dndt1,k) = sum;
+     }
   return(0);
 }
 /*---------------------------------------------------------------------------*/

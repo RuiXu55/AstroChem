@@ -151,6 +151,7 @@ void CalCoeff(ChemEvln *Evln, Real T, int verbose)
               break;
       /* Photo-reactions */
       case 10: break;
+
       /* Charge+grain Reaction */
       case 2: K = IonGrCoeff(Chem, i, T);
               break;
@@ -318,7 +319,6 @@ Real NeuGrCoeff(Chemistry *Chem, ChemEvln *Evln, int i)
   Real s = NeuStickCoeff(coeff[0].beta, Evln->T);
   Real size = Chem->GrSize[grainlab];
   Real ngr = Chem->Elements[Chem->N_Ele+grainlab].abundance/Evln->Abn_Den;
-
   return 8.57e-3 * s * ngr * sqrt(Evln->T/300.0/coeff[0].alpha) * SQR(size);
 }
 

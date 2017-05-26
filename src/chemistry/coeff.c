@@ -95,6 +95,36 @@ void IonizationCoeff(ChemEvln *Evln, Real zeta_eff, Real Av, Real G, int verbose
   return;
 }
 
+void IonizationCoeff1(ChemEvln *Evln, Real zeta_eff, Real Av, Real G,int verbose)
+{
+  int i;
+  Chemistry *Chem = Evln->Chem;
+
+  Evln->zeta_eff = zeta_eff;
+
+  for (i=0; i<Chem->NReaction; i++)
+  {
+    if (Chem->Reactions[i].rtype == 0)
+    { /* ionization reaction */
+      Evln->K[i] = zeta_eff * Chem->Reactions[i].coeff[0].gamma;
+
+      if (verbose == 0) {
+        PrintReaction(Chem,i,Evln->K[i]);
+      }
+    }
+    if (Chem->Reactions[i].rtype == 10)
+    { /* photoionization reaction */
+      Evln->K[i] = G*Chem->Reactions[i].coeff[0].alpha
+             *exp(-Chem->Reactions[i].coeff[0].gamma*Av);
+
+      if (verbose == 0) {
+        PrintReaction(Chem,i,Evln->K[i]);
+      }
+    }
+  }
+
+  return;
+}
 /*------------------------------------------------------------------------------
  * Calculate all other rate coefficients
  */
@@ -119,6 +149,9 @@ void CalCoeff(ChemEvln *Evln, Real T, int verbose)
       case 1: K = ChemCoeff(Chem->Reactions[i].coeff, T, 
                             Chem->Reactions[i].NumTRange);
               break;
+      /* Photo-reactions */
+      case 10: break;
+
       /* Charge+grain Reaction */
       case 2: K = IonGrCoeff(Chem, i, T);
               break;
@@ -134,8 +167,6 @@ void CalCoeff(ChemEvln *Evln, Real T, int verbose)
       /* Grain-surface reaction */
       case 6: K = GrSurfCoeff(Evln, i, T);
               break;
-      /* Photo-reactions */
-      case 10: break;
       default : ath_error("[coefficients]: reaction type should be 0-6!\n");
     }
 
@@ -288,7 +319,6 @@ Real NeuGrCoeff(Chemistry *Chem, ChemEvln *Evln, int i)
   Real s = NeuStickCoeff(coeff[0].beta, Evln->T);
   Real size = Chem->GrSize[grainlab];
   Real ngr = Chem->Elements[Chem->N_Ele+grainlab].abundance/Evln->Abn_Den;
-
   return 8.57e-3 * s * ngr * sqrt(Evln->T/300.0/coeff[0].alpha) * SQR(size);
 }
 
@@ -460,7 +490,7 @@ Real EleStickCoeff(Real size, int Z, Real T0)
   if (wei == 0.0) /* Also, valP = 0 */
     wei = 1.0;
 
-  //return 0.6;
+	//return 0.6;
   return valP/wei;
 }
 

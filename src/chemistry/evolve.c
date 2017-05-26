@@ -85,6 +85,7 @@ int evolve(Real tend, Real dttry, Real abstol)
       sum += rate;
     }
     NV_Ith_S(dndt1,k) = sum;
+    ath_pout(0,"sp=%s, r=%10e\n",Chem->Species[p].name,sum);
    }
   }
 

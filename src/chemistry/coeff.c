@@ -460,7 +460,7 @@ Real EleStickCoeff(Real size, int Z, Real T0)
   if (wei == 0.0) /* Also, valP = 0 */
     wei = 1.0;
 
-	//return 0.6;
+  //return 0.6;
   return valP/wei;
 }
 

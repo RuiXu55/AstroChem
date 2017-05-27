@@ -85,7 +85,7 @@ for(k=zs;k<ze;k++){
   zeta_eff = Ionization_disk(&Disk,r,k/pts);
   Tg = Temp_disk(&Disk,r);	  // the temperature at 1AU
   rho = Rho_disk(&Disk,r,k/pts);	 //radius + height
-  verbose = 1;
+  verbose = 0;
   /* choose all species for the output */
   ChemSet_allspecies(&Chem, &ChemOut);
   /* initialize the number density with single-element species */

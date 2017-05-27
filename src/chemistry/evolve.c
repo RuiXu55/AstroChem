@@ -80,12 +80,12 @@ int evolve(Real tend, Real dttry, Real abstol)
     for (i=0; i<Chem->Equations[p].NTerm; i++){
       EqTerm = &(Chem->Equations[p].EqTerm[i]);
       // dir=-1, reactant, 1 product.
-      if (((EqTerm->type) == 3 || (EqTerm->type ==4)) && EqTerm->dir<0)
+      if (((EqTerm->type) == 3 || (EqTerm->type ==4)) && EqTerm->dir<0){
         rate = Evln.K[EqTerm->ind];
-      sum += rate;
+        sum += rate;
+      }
     }
     NV_Ith_S(dndt1,k) = sum;
-    ath_pout(0,"sp=%s, r=%10e\n",Chem->Species[p].name,sum);
    }
   }
 
@@ -122,7 +122,6 @@ int evolve(Real tend, Real dttry, Real abstol)
            NV_Ith_S(Tnum,k)  += Evln.NumDen[p1];
          }
        }
-
        // update neu/mantle species number density
        for (k=0;k<Nsp1;k++){
          if (k<Ns)
@@ -147,7 +146,7 @@ int evolve(Real tend, Real dttry, Real abstol)
       break;
 
     //Evln.t  *=1.5;
-    Evln.t = MIN(1.5*Evln.t, 1e0*OneYear+Evln.t);
+    Evln.t = MIN(1.5*Evln.t, 1e1*OneYear+Evln.t);
   }
 
   /* finalize and return the status */
@@ -155,8 +154,10 @@ int evolve(Real tend, Real dttry, Real abstol)
   N_VDestroy_Serial(numden);
   CVodeFree(&cvode_mem);
 
-  N_VDestroy_Serial(dndt1);
-  N_VDestroy_Serial(numden1);
+  if (Chem->NGrain>0){
+    N_VDestroy_Serial(dndt1);
+    N_VDestroy_Serial(numden1);
+  }
 
   ath_pout(0,"Evolution completed at t=%e yr, with Abn(e-)=%e.\n",
      Evln.t/OneYear, Evln.NumDen[0]*Evln.Abn_Den);

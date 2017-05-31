@@ -69,24 +69,20 @@ int evolve(Real tend, Real dttry, Real abstol)
   if (Chem->NGrain>0){
     Nsp1    = (Chem->NGrain+1)*Ns;
     dndt1   = N_VNew_Serial(Nsp1);
-    Trate   = N_VNew_Serial(Nsp1/(Chem->NGrain+1));
-    Tnum   = N_VNew_Serial(Nsp1/(Chem->NGrain+1));
     numden1 = N_VNew_Serial(Nsp1);
-    // calculate adsorption/desorption rate
-    for(k=0;k<Nsp1;k++)
-    {	
-    p = ConvertInd(k);
-    sum  = 0.0;
-    for (i=0; i<Chem->Equations[p].NTerm; i++){
-      EqTerm = &(Chem->Equations[p].EqTerm[i]);
-      // dir=-1, reactant, 1 product.
-      if (((EqTerm->type) == 3 || (EqTerm->type ==4)) && EqTerm->dir<0){
-        rate = Evln.K[EqTerm->ind];
-        sum += rate;
-      }
+    for(i=0;i<Nsp1;i++){
+      NV_Ith_S(numden1,i) = 0.0; 
+      NV_Ith_S(dndt1,i) = 0.0;
     }
-    NV_Ith_S(dndt1,k) = sum;
-   }
+
+   /* init CVode */ 
+    cvode_mem1 = CVodeCreate(CV_BDF, CV_NEWTON);
+    flag = CVodeInit(cvode_mem1,f1,0.0,numden1);
+    flag = CVodeSStolerances(cvode_mem1, reltol, abstol);
+    flag = CVSpgmr(cvode_mem1,PREC_LEFT,Nsp1);
+    flag = CVSpilsSetGSType(cvode_mem1, MODIFIED_GS);
+    flag = CVBandPrecInit(cvode_mem1,Nsp1,Nsp1,Nsp1); //N, mu, ml
+    flag = CVodeSetMaxNumSteps(cvode_mem1, 500000);
   }
 
 
@@ -108,37 +104,28 @@ int evolve(Real tend, Real dttry, Real abstol)
     for(i=0;i<Nsp;i++)
       Evln.NumDen[i] = NV_Ith_S(numden,i);
     status = EleMakeup(verbose);
-
-    // update ad/desorption
+   
+    // update ad/des separately 
     if (Chem->NGrain>0){
-       // calculate total ad/des reaction rates
-       for (k=0;k<Ns;k++){
-         NV_Ith_S(Trate,k) = 0.0;
-         NV_Ith_S(Tnum,k) = 0.0;
-         for (i=0;i<=Chem->NGrain;i++){  
-           p  = k+i*Ns;
-           p1 = ConvertInd(p);
-           NV_Ith_S(Trate,k) += NV_Ith_S(dndt1,p);
-           NV_Ith_S(Tnum,k)  += Evln.NumDen[p1];
-         }
+      for (k=0;k<Nsp1;k++){
+         p = ConvertInd(k);
+         NV_Ith_S(numden1,k) = Evln.NumDen[p];
+         ath_pout(0,"name=%s,#= %10e \n",Chem->Species[p].name, NV_Ith_S(numden1,k));
        }
-       // update neu/mantle species number density
-       for (k=0;k<Nsp1;k++){
-         if (k<Ns)
-           NV_Ith_S(numden1,k) = NV_Ith_S(Tnum,k)*
-             (1.-NV_Ith_S(dndt1,k)/NV_Ith_S(Trate,k));
-         else
-           NV_Ith_S(numden1,k) = NV_Ith_S(Tnum,k%Ns)*
-             NV_Ith_S(dndt1,k%Ns)/NV_Ith_S(Trate,k%Ns);
-       }
-       // restore to NumDen
-       for (k=0;k<Nsp1;k++){
+      // backward Euler approximation. 
+
+      flag = CVode(cvode_mem1,Evln.t, numden1, &t2, CV_NORMAL);
+
+      for (k=0;k<Nsp1;k++){
          p = ConvertInd(k);
          Evln.NumDen[p] = NV_Ith_S(numden1,k);
+         ath_pout(0,"name=%s,#= %10e \n",Chem->Species[p].name, NV_Ith_S(numden1,k));
        }
+      status = EleMakeup(verbose);
     }
+
     ath_pout(0,"evolution time (yr) = %e\n",Evln.t/OneYear);
-    status = EleMakeup(verbose);
+    //status = EleMakeup(verbose);
 
     /* ends if evolution time is too large */
     c1 = clock();
@@ -146,7 +133,7 @@ int evolve(Real tend, Real dttry, Real abstol)
       break;
 
     //Evln.t  *=1.5;
-    Evln.t = MIN(1.5*Evln.t, 1e1*OneYear+Evln.t);
+    Evln.t = MIN(1.5*Evln.t, 1e4*OneYear+Evln.t);
   }
 
   /* finalize and return the status */
@@ -195,6 +182,39 @@ static int f(realtype t, N_Vector numden, N_Vector dndt, void *user_data)
   }
   return(0);
 }
+
+static int f1(realtype t, N_Vector numden1, N_Vector dndt1, void *user_data)
+{
+  int i, j, k, p, q, Nsp1, Ns;
+  Real sum,rate;
+  EquationTerm *EqTerm;
+  Ns = Chem.N_Neu_f+Chem.N_Neu+Chem.N_Neu_s;
+  Nsp1    = (Chem.NGrain+1)*Ns;
+
+  for (k=0; k<Nsp1; k++)
+  {
+    q = ConvertInd(k);
+    sum  = 0.0;
+    for (i=0; i<Chem.Equations[q].NTerm; i++)
+    {
+      EqTerm = &(Chem.Equations[q].EqTerm[i]);
+      if ((EqTerm->type) == 3 || (EqTerm->type ==4)){
+        rate = Evln.K[EqTerm->ind] * EqTerm->dir;
+        for (j=0; j<EqTerm->N; j++)
+        {
+          p = EqTerm->lab[j];
+          rate *= NV_Ith_S(numden1,IConvertInd(p));
+        }
+        sum += rate;
+      }
+    }
+   NV_Ith_S(dndt1,k) = sum;
+   ath_pout(0,"sp=%s, rate=%10e\n",Chem.Species[q].name,sum);
+  }
+  return(0);
+}
+
+
 
 int ConvertInd (int i)
 {

@@ -19,8 +19,8 @@ int main(int argc, char *argv[])
   char *athinput = NULL;
   Real tend,dttry,atol,rho, Tg, r,zeta_eff,zs,ze;
   Real G,G0,depth;
-  //Chemistry Chem;
-  //ChemEvln  Evln;
+  Chemistry Chem;
+  ChemEvln  Evln;
   ChemOutput ChemOut;
   Nebula Disk;
 /*--- Step 1. ----------------------------------------------------------------*/
@@ -96,7 +96,7 @@ for(k=zs;k<ze;k++){
   CalCoeff       (&Evln, Tg, verbose);       /* all other reactions */
   /* evolve the network from 0 to tend */
   Evln.t = 0.0;
-  evolve(tend, dttry,atol);
+  evolve(&Evln, tend, &dttry, atol);
   /* chemical network reduction */
   //species_reduction(&Evln);
   //select_reaction(&Evln);

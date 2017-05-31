@@ -60,7 +60,7 @@ Real SurfDenZ_disk(Nebula *Disk, Real radius, Real z);
 
 /*----------------------------------------------------------------------------*/
 /* evolve.c */
-int evolve(Real te, Real dttry, Real err);
+int evolve(ChemEvln *Evln, Real te, Real *dttry, Real err);
 void jacobi(ChemEvln *Evln, Real *numden, Real **jacob);
 void derivs(ChemEvln *Evln, Real *numden, Real *drv);
 //int EleMakeup(N_Vector &numden, int verbose);

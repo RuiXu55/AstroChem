@@ -58,11 +58,12 @@ int evolve(ChemEvln *Evln, Real te, Real *dttry, Real err)
   clock_t c0, c1; /* Timing the code */
   Chemistry *Chem = Evln->Chem;
 
-  dn_o_dt  = (Real*)calloc_1d_array(Chem->Ntot, sizeof(Real));
-  numden   = (Real*)calloc_1d_array(Chem->Ntot, sizeof(Real));
-
   Nsp      = Chem->Ntot-Chem->NGrain*(Chem->N_Neu_f 
              + Chem->N_Neu+Chem->N_Neu_s);
+
+  dn_o_dt  = (Real*)calloc_1d_array(Nsp, sizeof(Real));
+  numden   = (Real*)calloc_1d_array(Nsp, sizeof(Real));
+
   ath_pout(0,"Nsp=%d\n",Nsp);
 /* evolve the number densities */
 
@@ -81,15 +82,15 @@ int evolve(ChemEvln *Evln, Real te, Real *dttry, Real err)
     myerr = err;
 
     derivs(Evln, Evln->NumDen, dn_o_dt); /* Reaction rates */
-    cparray(Evln->NumDen, numden, Chem->Ntot);
+    cparray(Evln->NumDen, numden,Nsp);
 
-    status = stifbs(Evln, numden, dn_o_dt, Chem->Ntot, &t, *dttry, myerr,
+    status = stifbs(Evln, numden, dn_o_dt,Nsp, &t, *dttry, myerr,
                                       Evln->DenScale, &dt, &dtn);
 
     if (status != 0) {
     // if it fails, try another solver...
-      cparray(Evln->NumDen, numden, Chem->Ntot);
-      status = stifkr(Evln, numden, dn_o_dt, Chem->Ntot, &t, *dttry, myerr,
+      cparray(Evln->NumDen, numden, Nsp);
+      status = stifkr(Evln, numden, dn_o_dt, Nsp, &t, *dttry, myerr,
                                       Evln->DenScale, &dt, &dtn);
     }
 
@@ -99,7 +100,7 @@ int evolve(ChemEvln *Evln, Real te, Real *dttry, Real err)
       break;
     }
 
-    cparray(numden, Evln->NumDen, Chem->Ntot);
+    cparray(numden, Evln->NumDen,Nsp);
 
     Evln->t += dt;
 
@@ -150,19 +151,21 @@ int evolve(ChemEvln *Evln, Real te, Real *dttry, Real err)
  */
 void jacobi(ChemEvln *Evln, Real *numden, Real **jacob)
 {
-  int i, j, k, l, n, p, a;
+  int i, j, k, l, n, p, a, Nsp;
   Real Jt;
   Chemistry *Chem = Evln->Chem;
   EquationTerm *EqTerm;
+  Nsp      = Chem->Ntot-Chem->NGrain*(Chem->N_Neu_f 
+             + Chem->N_Neu+Chem->N_Neu_s);
 
   /* Initialization */
-  for (i=0; i<Chem->Ntot; i++) {
-  for (j=0; j<Chem->Ntot; j++) {
+  for (i=0; i<Nsp; i++) {
+  for (j=0; j<Nsp; j++) {
     jacob[i][j] = 0.0;
   }}
 
   /* Calculation */
-  for (i=0; i<Chem->Ntot; i++)  /* loop over all species */
+  for (i=0; i<Nsp; i++)  /* loop over all species */
   {
     n = Chem->Equations[i].NTerm;
 
@@ -197,13 +200,15 @@ void jacobi(ChemEvln *Evln, Real *numden, Real **jacob)
  */
 void derivs(ChemEvln *Evln, Real *numden, Real *drv)
 {
-  int i, j, k, p;
+  int i, j, k, p, Nsp;
   Real sum;
   Real rate;
   Chemistry *Chem = Evln->Chem;
   EquationTerm *EqTerm;
+  Nsp      = Chem->Ntot-Chem->NGrain*(Chem->N_Neu_f 
+             + Chem->N_Neu+Chem->N_Neu_s);
 
-  for (k=0; k<Chem->Ntot; k++)
+  for (k=0; k<Nsp; k++)
   {
     sum  = 0.0;
 

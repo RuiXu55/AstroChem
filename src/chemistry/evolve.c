@@ -26,6 +26,7 @@
 #include "../header/defs.h"
 #include "../header/chemistry.h"
 #include "../header/prototypes.h"
+#include "../header/chemproto.h"
 
 /*==============================================================================
  * PRIVATE FUNCTION PROTOTYPES:
@@ -50,7 +51,7 @@ void cparray(Real *ary1, Real *ary2, int N);
  */
 int evolve(ChemEvln *Evln, Real te, Real *dttry, Real err)
 {
-  int i, status, verbose;
+  int i, status, verbose, Nsp;
   Real *numden, *dn_o_dt;
   Real dt, dtn, t=0.0, tp;
   Real myerr;
@@ -60,10 +61,12 @@ int evolve(ChemEvln *Evln, Real te, Real *dttry, Real err)
   dn_o_dt  = (Real*)calloc_1d_array(Chem->Ntot, sizeof(Real));
   numden   = (Real*)calloc_1d_array(Chem->Ntot, sizeof(Real));
 
-  c0 = clock();
-
+  Nsp      = Chem->Ntot-Chem->NGrain*(Chem->N_Neu_f 
+             + Chem->N_Neu+Chem->N_Neu_s);
+  ath_pout(0,"Nsp=%d\n",Nsp);
 /* evolve the number densities */
 
+  c0 = clock();
   ath_pout(0,"\n");
   ath_pout(0,"Chemical evolution started...\n");
   ath_pout(0,"At t=%e yr, Abn(e-)=%e, next dt=%e yr.\n",

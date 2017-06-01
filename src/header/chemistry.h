@@ -57,6 +57,20 @@ typedef struct SpeciesInfo_s {
 
 }SpeciesInfo;
 
+/* mantle ad/des rate */
+typedef struct AdDesCoef_s{
+  int ind;    /* N =  NGrain + 1 */
+  Real d1;
+  Real d2;
+  Real d3;
+  Real d4;
+}AdDesCoef;
+
+typedef struct AdDes_s{
+ AdDesCoef *inv; 
+}AdDes;
+
+
 /*-----------------------------------------------------------------------------
  * Reaction coefficient
  */
@@ -158,6 +172,7 @@ typedef struct Chemistry_s {
 
   /* Array of evolution equations of all species */
   EquationInfo *Equations;   /* 0..Ntot-1 */
+
 
 }Chemistry;
 

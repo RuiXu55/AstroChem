@@ -8,7 +8,7 @@ LIBTOOL  = $(SHELL) $(builddir)/libtool
 CPP      = gcc -E
 CPPFLAGS =
 CC       = gcc
-CFLAGS   = 
+CFLAGS   = -llapack -lblas
 LDFLAGS  = 
 
 SUNDIALS_INCS = -I$(builddir)/include

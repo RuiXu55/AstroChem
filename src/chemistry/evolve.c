@@ -32,6 +32,17 @@ int IConvertInd (int m);
 static int f(realtype t, N_Vector u, N_Vector udot, void *user_data);
 static int f1(realtype t, N_Vector u, N_Vector udot, void *user_data);
 static int check_flag(void *flagvalue, char *funcname, int opt);
+void rmat(Real *numden1, Real *jacob);
+
+void inverse(Real* A, int N)
+{
+  int IPIV[N];
+  int LWORK = N*N;
+  Real WORK[LWORK];
+  int INFO;
+  dgetrf_(&N, &N, A, &N, IPIV, &INFO);
+  dgetri_(&N, A, &N, IPIV, WORK, &LWORK, &INFO);
+}
 
 /*============================================================================*/
 int evolve(Real tend, Real dttry, Real abstol)
@@ -40,7 +51,8 @@ int evolve(Real tend, Real dttry, Real abstol)
   realtype t,t1,t2,reltol=1.e-6;
   Real sum,rate;
   int flag, status,verbose,i,j,k,p,p1,Ns,Nsp,Nsp1;
-  N_Vector numden,dndt,numden1,dndt1,Trate,Tnum;
+  N_Vector numden,dndt;
+  Real *numden1, *dndt1;
   EquationTerm *EqTerm;
   void* cvode_mem, *cvode_mem1;
   Chemistry *Chem = Evln.Chem;
@@ -68,21 +80,29 @@ int evolve(Real tend, Real dttry, Real abstol)
   // Mantle and their neutral counterpart
   if (Chem->NGrain>0){
     Nsp1    = (Chem->NGrain+1)*Ns;
-    dndt1   = N_VNew_Serial(Nsp1);
-    numden1 = N_VNew_Serial(Nsp1);
-    for(i=0;i<Nsp1;i++){
-      NV_Ith_S(numden1,i) = 0.0; 
-      NV_Ith_S(dndt1,i) = 0.0;
+    numden1 = (Real*)calloc_1d_array(Nsp1,sizeof(Real));
+    dndt1   = (Real*)calloc_1d_array(Nsp1,sizeof(Real));
+
+    Real *dfdy;
+    dfdy = (Real*)calloc_1d_array(Nsp1*Nsp1, sizeof(Real));
+    rmat(numden1, dfdy); 
+    inverse(dfdy, Nsp1);
+    for(i=0;i<Nsp1;i++)
+    {
+      for(j=0;j<Nsp1;j++)
+        ath_pout(0,"%10e ",dfdy[i,j]);
+      ath_pout(0,"\n");
     }
 
-   /* init CVode */ 
+   /* init CVode 
     cvode_mem1 = CVodeCreate(CV_BDF, CV_NEWTON);
     flag = CVodeInit(cvode_mem1,f1,0.0,numden1);
     flag = CVodeSStolerances(cvode_mem1, reltol, abstol);
     flag = CVSpgmr(cvode_mem1,PREC_LEFT,Nsp1);
     flag = CVSpilsSetGSType(cvode_mem1, MODIFIED_GS);
-    flag = CVBandPrecInit(cvode_mem1,Nsp1,Nsp1,Nsp1); //N, mu, ml
-    flag = CVodeSetMaxNumSteps(cvode_mem1, 500000);
+    flag = CVBandPrecInit(cvode_mem1,Nsp1,10,10); //N, mu, ml
+    flag = CVodeSetMaxNumSteps(cvode_mem1,5000);
+    */
   }
 
 
@@ -106,23 +126,24 @@ int evolve(Real tend, Real dttry, Real abstol)
     status = EleMakeup(verbose);
    
     // update ad/des separately 
+    /*
     if (Chem->NGrain>0){
       for (k=0;k<Nsp1;k++){
          p = ConvertInd(k);
          NV_Ith_S(numden1,k) = Evln.NumDen[p];
-         ath_pout(0,"name=%s,#= %10e \n",Chem->Species[p].name, NV_Ith_S(numden1,k));
+         ath_pout(0,"Before=%s,#= %10e \n",Chem->Species[p].name, NV_Ith_S(numden1,k));
        }
       // backward Euler approximation. 
-
       flag = CVode(cvode_mem1,Evln.t, numden1, &t2, CV_NORMAL);
 
       for (k=0;k<Nsp1;k++){
          p = ConvertInd(k);
          Evln.NumDen[p] = NV_Ith_S(numden1,k);
-         ath_pout(0,"name=%s,#= %10e \n",Chem->Species[p].name, NV_Ith_S(numden1,k));
+         ath_pout(0,"After=%s,#= %10e \n",Chem->Species[p].name, NV_Ith_S(numden1,k));
        }
       status = EleMakeup(verbose);
     }
+    */
 
     ath_pout(0,"evolution time (yr) = %e\n",Evln.t/OneYear);
     //status = EleMakeup(verbose);
@@ -141,10 +162,12 @@ int evolve(Real tend, Real dttry, Real abstol)
   N_VDestroy_Serial(numden);
   CVodeFree(&cvode_mem);
 
+  /*
   if (Chem->NGrain>0){
     N_VDestroy_Serial(dndt1);
     N_VDestroy_Serial(numden1);
   }
+  */
 
   ath_pout(0,"Evolution completed at t=%e yr, with Abn(e-)=%e.\n",
      Evln.t/OneYear, Evln.NumDen[0]*Evln.Abn_Den);
@@ -183,10 +206,52 @@ static int f(realtype t, N_Vector numden, N_Vector dndt, void *user_data)
   return(0);
 }
 
-static int f1(realtype t, N_Vector numden1, N_Vector dndt1, void *user_data)
+/*----------------------------------------------------------------------------*/
+/* user provided routine for calculating the Jacobi matrix
+ *  */
+void rmat(Real *numden1, Real *jacob)
+{
+  int i, j, k, l, n, p, q, a, Ns, Nsp1;
+  Real Jt;
+  EquationTerm *EqTerm;
+  Ns   = Chem.N_Neu_f+Chem.N_Neu+Chem.N_Neu_s;
+  Nsp1 = (Chem.NGrain+1)*Ns;
+
+  /* Initialization */
+  for (i=0; i<Nsp1; i++) {
+  for (j=0; j<Nsp1; j++) {
+    jacob[i,j] = 0.0;
+  }}
+
+  /* Calculation */
+  for (i=0; i<Nsp1; i++)  /* loop over all species */
+  {
+  q = ConvertInd(k);
+  n = Chem.Equations[q].NTerm;
+  for (j=0; j<n; j++) /* loop over all reactions of this species */
+  {
+    EqTerm = &(Chem.Equations[q].EqTerm[j]);
+    for (k=0; k<EqTerm->N; k++)  /* loop over all reactants */
+    {
+      Jt = Evln.K[EqTerm->ind] * EqTerm->dir;
+      for (l=0; l<EqTerm->N; l++)
+      {
+        p = EqTerm->lab[l];
+        if (l != k) Jt *= numden1[IConvertInd(p)];
+      }
+      p  = EqTerm->lab[k];
+      jacob[q,IConvertInd(p)] += Jt;  /* Obtain the Jacobian from this term */
+    }
+  }
+}
+
+return;
+}
+
+static int f1(realtype t2, N_Vector numden1, N_Vector dndt1, void *user_data)
 {
   int i, j, k, p, q, Nsp1, Ns;
-  Real sum,rate;
+  Real sum, rate;
   EquationTerm *EqTerm;
   Ns = Chem.N_Neu_f+Chem.N_Neu+Chem.N_Neu_s;
   Nsp1    = (Chem.NGrain+1)*Ns;
@@ -209,7 +274,7 @@ static int f1(realtype t, N_Vector numden1, N_Vector dndt1, void *user_data)
       }
     }
    NV_Ith_S(dndt1,k) = sum;
-   ath_pout(0,"sp=%s, rate=%10e\n",Chem.Species[q].name,sum);
+   //ath_pout(0,"sp=%s, rate=%10e\n",Chem.Species[q].name,sum);
   }
   return(0);
 }

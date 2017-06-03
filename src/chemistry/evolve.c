@@ -57,10 +57,10 @@ int evolve(Real tend, Real dttry, Real abstol)
   void* cvode_mem, *cvode_mem1;
   Chemistry *Chem = Evln.Chem;
   cvode_mem = NULL;
-  Real ad, des;
+  Real ad, des,tmp,tmp1;
   AdDes ds;
 
-  dt = 1e3*OneYear; // year
+  dt = 1e4*OneYear; // year
 
   // Nsp is non-mantle species
   Ns = Chem->N_Neu_f + Chem->N_Neu+Chem->N_Neu_s;
@@ -85,42 +85,40 @@ int evolve(Real tend, Real dttry, Real abstol)
   if (Chem->NGrain>0){
     Nsp1    = (Chem->NGrain+1)*Ns;
     numden1 = (Real*)calloc_1d_array(Nsp1,sizeof(Real));
-    numden2 = (Real*)calloc_1d_array(Nsp1,sizeof(Real));
 
     ds.inv = (AdDesCoef*)calloc_1d_array(Ns,sizeof(AdDesCoef));
     AdDesCoef dat, invd;
+
     for (k=0;k<Ns;k++){
       q = ConvertInd(k);
       for (i=0; i<Chem->Equations[q].NTerm; i++)
       {
         EqTerm = &(Chem->Equations[q].EqTerm[i]);
-        if (EqTerm->type == 3)
+        if (EqTerm->type == 3)  // adsorption
            ad= Evln.K[EqTerm->ind];
-        if (EqTerm->type == 4)
+        if (EqTerm->type == 4)  // desorption
            des = Evln.K[EqTerm->ind];
       }
-   
+
+      tmp  = 1.+ ad*dt-ad*des*dt*dt/(1.+des*dt);
+      tmp1 = 1.+des*dt-ad*des*dt*dt/(1.+ad*dt);
+      ds.inv[k].d1 = 1./tmp;
+      ds.inv[k].d2 = des*dt/(1.+des*dt)/tmp;
+      ds.inv[k].d3 = 1./tmp1;
+      ds.inv[k].d4 = ad*dt/(1.+ad*dt)/tmp1;
+      /*
       dat.d1 = 1.0 + dt*ad;
       dat.d2 = -ad*dt;
       dat.d3 = -des*dt;
       dat.d4 = 1.0+ dt*des;
+
       Real coef = 1.0/(dat.d1*dat.d4-dat.d2*dat.d3);
       ds.inv[k].d1 = coef*dat.d4;
       ds.inv[k].d2 = -coef*dat.d2;
       ds.inv[k].d3 = -coef*dat.d3;
       ds.inv[k].d4 = coef*dat.d1;
-      ath_pout(0,"ds=%10e, %10e, %10e, %10e\n",ds.inv[k].d1,ds.inv[k].d2,ds.inv[k].d3,ds.inv[k].d4);
+      */
     }
-
-   /* init CVode 
-    cvode_mem1 = CVodeCreate(CV_BDF, CV_NEWTON);
-    flag = CVodeInit(cvode_mem1,f1,0.0,numden1);
-    flag = CVodeSStolerances(cvode_mem1, reltol, abstol);
-    flag = CVSpgmr(cvode_mem1,PREC_LEFT,Nsp1);
-    flag = CVSpilsSetGSType(cvode_mem1, MODIFIED_GS);
-    flag = CVBandPrecInit(cvode_mem1,Nsp1,10,10); //N, mu, ml
-    flag = CVodeSetMaxNumSteps(cvode_mem1,5000);
-    */
   }
 
 
@@ -141,46 +139,25 @@ int evolve(Real tend, Real dttry, Real abstol)
 
     for(i=0;i<Nsp;i++)
       Evln.NumDen[i] = NV_Ith_S(numden,i);
-    status = EleMakeup(verbose);
+    //status = EleMakeup(verbose);
    
-    //Evln.t  *=1.5;
-    Evln.t = MIN(1.5*Evln.t, 1e3*OneYear+Evln.t);
+    Evln.t = MIN(1.5*Evln.t, dt+Evln.t);
+
     // update ad/des separately 
-    if (Chem->NGrain>0 && Evln.t>1e3*OneYear)
+    if (Chem->NGrain>0 && Evln.t>dt)
     {
-      for (k=0;k<Nsp1;k++){
-         p = ConvertInd(k);
-         numden1[k] = Evln.NumDen[p];
-      }
       for (k=0;k<Ns;k++){
-        k1 = k+Ns;
-        numden2[k] = numden1[k]*ds.inv[k].d1 + numden1[k1]*ds.inv[k].d3;
-        numden2[k1] = numden1[k]*ds.inv[k].d2 + numden1[k1]*ds.inv[k].d4;
+	numden1[k]  = Evln.NumDen[ConvertInd(k)]*ds.inv[k].d1 +
+		      Evln.NumDen[ConvertInd(k+Ns)]*ds.inv[k].d2;
+	numden1[k+Ns] = Evln.NumDen[ConvertInd(k+Ns)]*ds.inv[k].d3 +
+		      Evln.NumDen[ConvertInd(k)]*ds.inv[k].d4;
       }
       for (k=0;k<Nsp1;k++){
          p = ConvertInd(k);
-         Evln.NumDen[p] = numden2[k];
+         Evln.NumDen[p] = numden1[k];
       }
 
     }
-    /*
-    if (Chem->NGrain>0){
-      for (k=0;k<Nsp1;k++){
-         p = ConvertInd(k);
-         NV_Ith_S(numden1,k) = Evln.NumDen[p];
-         ath_pout(0,"Before=%s,#= %10e \n",Chem->Species[p].name, NV_Ith_S(numden1,k));
-       }
-      // backward Euler approximation. 
-      flag = CVode(cvode_mem1,Evln.t, numden1, &t2, CV_NORMAL);
-
-      for (k=0;k<Nsp1;k++){
-         p = ConvertInd(k);
-         Evln.NumDen[p] = NV_Ith_S(numden1,k);
-         ath_pout(0,"After=%s,#= %10e \n",Chem->Species[p].name, NV_Ith_S(numden1,k));
-       }
-      status = EleMakeup(verbose);
-    }
-    */
 
     ath_pout(0,"evolution time (yr) = %e\n",Evln.t/OneYear);
     //status = EleMakeup(verbose);

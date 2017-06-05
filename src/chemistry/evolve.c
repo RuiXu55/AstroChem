@@ -109,6 +109,30 @@ int evolve(Real tend, Real dttry, Real abstol)
 
 static int f(realtype t, N_Vector numden, N_Vector dndt, void *user_data)
 {
+  int i, j, k, p;
+  Real sum,rate;
+  EquationTerm *EqTerm;
+  for (k=0; k<Chem.Ntot; k++)
+  {
+    sum  = 0.0;
+    for (i=0; i<Chem.Equations[k].NTerm; i++)
+    {
+      EqTerm = &(Chem.Equations[k].EqTerm[i]);
+      rate = Evln.K[EqTerm->ind] * EqTerm->dir;
+      for (j=0; j<EqTerm->N; j++)
+      {
+        p = EqTerm->lab[j];
+        rate *= NV_Ith_S(numden,p);
+      }
+      sum += rate;
+    }
+   NV_Ith_S(dndt,k) = sum;
+  }
+  return(0);
+}
+/*
+static int f(realtype t, N_Vector numden, N_Vector dndt, void *user_data)
+{
   int i, j, k, p,Nsp;
   Real sum,rate;
   EquationTerm *EqTerm;
@@ -133,6 +157,7 @@ static int f(realtype t, N_Vector numden, N_Vector dndt, void *user_data)
   }
   return(0);
 }
+*/
 
 int ConvertInd (int i)
 {

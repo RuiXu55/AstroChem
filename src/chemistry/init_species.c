@@ -609,7 +609,7 @@ void OutputSpecies(Chemistry *Chem)
       k = Chem->Elements[i].single[j];
       ath_pout(0,"  %5s,",Chem->Species[k].name);
     }
-    ath_pout(0,"\n");
+    ath_pout(0,"numsig=%d \n",Chem->Elements[i].numsig);
   }
 
   ath_pout(0,"Number of full Neutral Species:    %d\n",Chem->N_Neu_f);

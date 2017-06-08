@@ -53,74 +53,70 @@ void init_numberden(ChemEvln *Evln, Real rho, int verbose)
 
   Evln->rho = rho;
   Evln->t   = 0.0;
-
-	sumgas    = 0.0;
+  sumgas    = 0.0;
   ChargeDen = 0.0;
-	grtot     = 0.0;
-	/* set initial abundance from input file initial.txt
- 	 * if initcond is larger than zero */
+  grtot     = 0.0;
+  /* set initial abundance from input file initial.txt
+   * if initcond is larger than zero */
   initcond  = par_getd_def("problem","initcond", 0);
-
   /* Calculate initial number density */
   ath_pout(verbose,"\n");
   ath_pout(verbose,"Initial number density:\n");
   ath_pout(verbose,"\n");
 
-	/* initialize species # density as zero */
+  /* initialize species # density as zero */
   for (i=0; i<Chem->Ntot; i++)
-    Evln->NumDen[i] = 0.0;
+     Evln->NumDen[i] = 0.0;
 
-  if(initcond>0)
-	{
-    /* Reset element abundance to zero */
-    for (i=0; i<Chem->N_Ele_tot; i++)
-      Chem->Elements[i].abundance = 0.0;
+  // initcond>0 user defined initial condition
+  if(initcond>0) 
+  {
+  /* Reset element abundance to zero */
+  for (i=0; i<Chem->N_Ele_tot; i++)
+     Chem->Elements[i].abundance = 0.0;
 
-    sprintf(fname,"%s",par_gets("job","init_abundance"));
-    fp = fopen(fname,"r");
-    if(fp == NULL){
-      ath_perr(-1,"[construct_species]: Unable to open the inital abundance file!\n");
-      return;
-    }
+  sprintf(fname,"%s",par_gets("job","init_abundance"));
+  fp = fopen(fname,"r");
+  if(fp == NULL)
+    ath_perr(-1,"[construct_species]:Unable to open the inital abundance file!\n");
   
-    fgets(line,MAXLEN,fp);
-		/* N is total number of initial species */
-    fscanf(fp, "%d\n", &N);
-    if (N <= 0)
-      ath_error("[density]: # of species with initial abundance must be positive!\n");
-    fgets(line,MAXLEN,fp);
-    for (i=0; i<N; i++)
-    {
-      fscanf(fp, "%s", name);
-      fscanf(fp, "%lf\n",&abun);
-      for (p=1;p<Chem->Ntot;p++) {
-		    if(strcmp(Chem->Species[p].name, name)==0)
-			  {
-					/* calculate species relative abundance */
-          Evln->NumDen[p] = abun;
-          Spe = &(Chem->Species[p]);
-          sumgas += Spe->mass*abun;
-	        /* calculate element abundance */
-          for (j=0; j<Chem->N_Ele_tot; j++)
-					  Chem->Elements[j].abundance += abun*MAX(Spe->composition[j],0);
-			    break;
-			  }
-      }// end loop for p
-	  }/* end iteration for i over all input species */
+  fgets(line,MAXLEN,fp);
+  /* N is total number of initial species */
+  fscanf(fp, "%d\n", &N);
+  if (N <= 0)
+    ath_error("[density]: # of species with initial abundance must be positive!\n");
+
+  fgets(line,MAXLEN,fp);
+  for (i=0; i<N; i++)
+  {
+    fscanf(fp, "%s", name);
+    fscanf(fp, "%lf\n",&abun);
+    for (p=1;p<Chem->Ntot;p++) {
+      if(strcmp(Chem->Species[p].name, name)==0)
+      {
+        /* read species relative abundance */
+        Evln->NumDen[p] = abun;
+        Spe = &(Chem->Species[p]);
+        sumgas += Spe->mass*abun;
+
+        /* calculate element abundance */
+        for (j=0; j<Chem->N_Ele_tot; j++)
+          Chem->Elements[j].abundance += abun*Spe->composition[j];
+        break;
+      }
+    }// end loop for p
+  }/* end iteration for i over all input species */
 
   /* Calculate the relative charge density */
   for (i=0; i<Chem->Ntot; i++)
-  {
     if ((i != 0) && (Chem->Species[i].charge != 0))
       ChargeDen += Evln->NumDen[i] * Chem->Species[i].charge;
-  }
   /* Make up for the charge density */
-  if (ChargeDen >= 0.0)
-  {
-    Evln->NumDen[0] = ChargeDen;
-  }
+  Evln->NumDen[0] = ChargeDen;
 
-  /* recalculate grain abundance */
+  /* Recalculate grain abundance for user defined
+   * initial condition 
+   * */
   for (i=0; i<Chem->NGrain; i++)
     grtot += Chem->GrFrac[i];
   ratio = sumgas / (1.0-grtot);
@@ -128,25 +124,25 @@ void init_numberden(ChemEvln *Evln, Real rho, int verbose)
   {
     k = Chem->N_Ele+i;  /* label of grain element */
     Chem->Elements[k].abundance
-         = Chem->GrFrac[i]/Chem->Elements[k].mass*ratio;
+      = Chem->GrFrac[i]/Chem->Elements[k].mass*ratio;
   }
 
-  /* Calculate abundance - number density ratio */
+  /* Rescale relative # density to real # density*/
   sum = 0.0;
   for (i=0; i<Chem->N_Ele+Chem->NGrain; i++) {
     sum += Ele[i].mass * Ele[i].abundance;
   }
   Evln->Abn_Den = (sum*1.672e-24)/rho; /* == 1/n_H */
 
-	/* calculate species number density */
+  /* calculate species number density */
   for (p=0;p<Chem->Ntot;p++)
-	{
+  {
     Evln->NumDen[p] /= Evln->Abn_Den;
     Spe = &(Chem->Species[p]);
     ath_pout(verbose, "[%s]: = %e\n", Spe->name, Evln->NumDen[p]);
   }
 
-	/* initialize dust grain with single element */
+  /* initialize dust grain with single element */
   for (i = Chem->N_Ele; i < Chem->N_Ele+Chem->NGrain; i++)
   {/* Initialize with the first single-element species of each element */
     k = Ele[i].single[0];
@@ -157,10 +153,11 @@ void init_numberden(ChemEvln *Evln, Real rho, int verbose)
 
   /* output element abundance for comparison */
   for (j=0; j<Chem->N_Ele_tot; j++)
-    ath_pout(0,"%3s abundance: %1.15f\n",Chem->Elements[j].name,Chem->Elements[j].abundance);
-  /* initialize species as their first single element */
-	}else{
+    ath_pout(0,"%3s abundance: %1.15f\n",
+      Chem->Elements[j].name,Chem->Elements[j].abundance);
 
+  /* initialize species as their first single element */
+  }else{
    /* Calculate abundance - number density ratio */
    sum = 0.0;
    for (i=0; i<Chem->N_Ele+Chem->NGrain; i++) {

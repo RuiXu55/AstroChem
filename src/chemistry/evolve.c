@@ -62,7 +62,6 @@ int evolve(Real tend, Real dttry, Real abstol)
   // Ns=# of Neutral species, Nsp is non-mantle species
   Ns = Chem->N_Neu_f + Chem->N_Neu+Chem->N_Neu_s;
   Nsp = Chem->Ntot-Ns*Chem->NGrain;
-
   dndt = N_VNew_Serial(Nsp);
   numden = N_VNew_Serial(Nsp);
   /* initialize number density for calculation */
@@ -98,7 +97,7 @@ int evolve(Real tend, Real dttry, Real abstol)
            des = Evln.K[EqTerm->ind];
       }
       ds.inv[k].d1 = ad;
-      ds.inv[k].d2 = des;
+      ds.inv[k].d2 = des*0.0;
       /*
       tmp  = 1.+ ad*dt-ad*des*dt*dt/(1.+des*dt);
       tmp1 = 1.+des*dt-ad*des*dt*dt/(1.+ad*dt);
@@ -136,7 +135,7 @@ int evolve(Real tend, Real dttry, Real abstol)
     //coeff_adj(&Evln);
     for(i=0;i<Nsp;i++)
       NV_Ith_S(numden,i) = Evln.NumDen[i];
-    //flag = CVode(cvode_mem, Evln.t, numden, &t, CV_NORMAL);
+    flag = CVode(cvode_mem, Evln.t, numden, &t, CV_NORMAL);
 
     for(i=0;i<Nsp;i++)
       Evln.NumDen[i] = NV_Ith_S(numden,i);
@@ -153,22 +152,19 @@ int evolve(Real tend, Real dttry, Real abstol)
 	  exp(-(ds.inv[k].d1+ds.inv[k].d2)*dt)+
 	  Tn*ds.inv[k].d2/(ds.inv[k].d1+ds.inv[k].d2);
 	numden1[k+Ns] = Tn-numden1[k];
+	ath_pout(0,"sp=%s,exp=%10e,d2/d1+d2 = %10e\n",Chem->Species[p].name,exp(-(ds.inv[k].d1+ds.inv[k].d2)*dt),ds.inv[k].d2/(ds.inv[k].d1+ds.inv[k].d2));
       }
 
       for (k=0;k<Nsp1;k++){
          p = ConvertInd(k);
-         //Evln.NumDen[p] = numden1[k];
+         Evln.NumDen[p] = numden1[k];
       }
 
     }
-    dt = MIN(1.5*Evln.t, 1e4*OneYear+Evln.t)-Evln.t;
-    Evln.t = MIN(1.5*Evln.t, 1e4*OneYear+Evln.t);
+    dt = MIN(1.5*Evln.t, 1e2*OneYear+Evln.t)-Evln.t;
+    Evln.t = MIN(1.5*Evln.t, 1e2*OneYear+Evln.t);
 
-    status = EleMakeup(verbose);
-    for(i=0;i<Nsp;i++)
-      ath_pout(0,"sp=%s, #=%10e\n",Chem->Species[i].name,Evln.NumDen[i]);
-   for (i=0; i<Chem->N_Ele; i++)
-      ath_pout(0,"Ele=%s, #=%10e\n",Chem->Elements[i].name,Chem->Elements[i].abundance);
+    //status = EleMakeup(verbose);
     ath_pout(0,"evolution time (yr) = %e\n",Evln.t/OneYear);
 
     /* ends if evolution time is too large */
@@ -283,8 +279,10 @@ int EleMakeup(int verbose)
     {
       ath_pout(verbose, "Warning: At t=%e yr, [%s] = %e < 0!\n",
         Evln.t/OneYear, Chem->Species[i].name,Evln.NumDen[i]);
-      NumDen[i] = 0.0;
+      Evln.NumDen[i] = 0.0;
+    }
   }
+
 
   /* Calculate the elemental density */
   for (i=0; i<Chem->Ntot; i++)
@@ -296,9 +294,9 @@ int EleMakeup(int verbose)
     }
   }
 
-   /* Make up for the element densities */
-   for (i=0; i<Chem->N_Ele; i++)
-   {
+  /* Make up for the element densities */
+  for (i=0; i<Chem->N_Ele; i++)
+  {
      /* Calculate the discrepency */
      disp = (EleNumDen[i] - Chem->Elements[i].abundance/Evln.Abn_Den);
      ath_pout(verbose,"Discrepancy for %3s : %e over %e\n",
@@ -308,35 +306,36 @@ int EleMakeup(int verbose)
      * the number densities of its single-element species
      */
      if (disp<0.0){
-      den = 0.0;
+       den = 0.0;
+       /* Calculate the element number density from single-element species */
+       for (j=0; j<Chem->Elements[i].numsig; j++)
+       {
+         l = Chem->Elements[i].single[j];
+         den += Evln.NumDen[l]*Chem->Species[l].composition[i];
+       }
+       frac = disp/MAX(TINY_NUMBER,den);
 
-      /* Calculate the element number density from single-element species */
-      for (j=0; j<Chem->Elements[i].numsig; j++)
-      {
-        l = Chem->Elements[i].single[j];
-        den += NumDen[l]*Chem->Species[l].composition[i];
-      }
-      frac = disp/den;
 
-      for (j=0; j<Chem->Elements[i].numsig; j++)
-      {
-        l = Chem->Elements[i].single[j];
-
-        NumDen[l] *= (1.0 - frac);
-        //if( NumDen[l]<0.0) NumDen[l] = 0.0;
-      }
+       for (j=0; j<Chem->Elements[i].numsig; j++)
+       {
+         l = Chem->Elements[i].single[j];
+         Evln.NumDen[l] *= (1.0 - frac);
+       }
      }
+
      /* if abundance is larger than the true value, then reduce
       * the number densities of all neutral species containing this element
       */
      else
      {
        status = EleMakeup_sub(i, disp);
-      }
+     }
+     
       
-      if (status < 0)
-        return status;
-      }
+     if (status < 0)
+       return status;
+   } // loop for i 0-Chem.Ele
+
 /* Make up for the grain densities */
   for (i=Chem->N_Ele; i<Chem->N_Ele+Chem->NGrain; i++)
   {
@@ -347,12 +346,12 @@ int EleMakeup(int verbose)
       Chem->Elements[i].name, disp, Chem->Elements[i].abundance/Evln.Abn_Den);
 
     /* Density make up */
-    frac = disp / EleNumDen[i];
+    frac = disp / MAX(TINY_NUMBER,EleNumDen[i]);
 
     for (j=Chem->GrInd; j<Chem->Ntot; j++)
     {
       if (Chem->Species[j].composition[i] > 0)
-        NumDen[j] *= (1.0-frac);
+        Evln.NumDen[j] *= (1.0-frac);
     }
   }
 
@@ -361,18 +360,18 @@ int EleMakeup(int verbose)
   for (i=0; i<Chem->Ntot; i++)
   {
     if ((i != 0) && (Chem->Species[i].charge != 0))
-      ChargeDen += NumDen[i] * Chem->Species[i].charge;
+      ChargeDen += Evln.NumDen[i] * Chem->Species[i].charge;
   }
 
 /* Make up for the charge density */
 
   if (ChargeDen >= 0.0)
   {
-    NumDen[0] = ChargeDen;
+    Evln.NumDen[0] = ChargeDen;
   }
   else
   {
-    NumDen[0] = 0.0;
+    Evln.NumDen[0] = 0.0;
 
     status = ChargeMakeup( -ChargeDen);
   }
@@ -381,7 +380,7 @@ int EleMakeup(int verbose)
 
   return status;
 }
-}
+
 
 /*---------------------------------------------------------------------------*/
 /* Density make up for single element species
@@ -416,7 +415,7 @@ int EleMakeup_sub(int q, Real dn)
 
 /* Density makeup */
 
-  frac = dn / den;
+  frac = dn / MAX(TINY_NUMBER,den);
 
   for (i=0; i<Chem->Ntot; i++)
   {

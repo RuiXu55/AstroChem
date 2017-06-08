@@ -812,7 +812,7 @@ void PrintReaction(Chemistry *Chem, int i, Real K)
 {
   int k;
 
-  ath_pout(0, "Reaction %4d (K=%10e): ", i+1, K);
+  ath_pout(0, "Reaction %4d (K=%10e): type=%d ", i+1, K,Chem->Reactions[i].rtype);
 
   k = Chem->Reactions[i].reactant[0];
   ath_pout(0, "%7s ", Chem->Species[k].name);

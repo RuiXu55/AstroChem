@@ -63,6 +63,7 @@
 void Analyze(Chemistry *Chem, int i);
 int  FindElem(Chemistry *Chem, char name[NL_SPE], int p, int *l);
 void OutputSpecies(Chemistry *Chem);
+int NeutoMan(Chemistry *Chem, int i, int j);
 
 /*============================================================================*/
 /*---------------------------- Public Functions ------------------------------*/
@@ -74,7 +75,7 @@ void OutputSpecies(Chemistry *Chem);
 void init_species(Chemistry *Chem)
 {
   FILE *fp;
-  int i, j, k, p, n,TmpInd;
+  int i, j, k, p, n,TmpInd,n1;
   char line[MAXLEN],mantle[8],fname[20];
   Real sumgas, grtot, ratio;
   sprintf(fname,"%s",par_gets("job","read_species"));
@@ -402,42 +403,52 @@ void init_species(Chemistry *Chem)
   /* Construct mantle species */
   p = p + Chem->NGrain*(2*Chem->GrCharge+1);
   Chem->ManInd = p + 1;   /* Starting index for mantle species */
-	for (i=1;i<=Chem->N_Neu_f + Chem->N_Neu + Chem->N_Neu_s; i++)
+  for (i=1;i<=Chem->N_Neu_f + Chem->N_Neu + Chem->N_Neu_s; i++)
   {
-		/* Find counterpart gas phase species index */
-		if(i<=Chem->N_Neu_f)
-			TmpInd = i;
-		else if (i<=Chem->N_Neu+ Chem->N_Neu_f)
-			TmpInd = 2*Chem->N_Neu_f + i;
-		else
-			TmpInd = 2*Chem->N_Neu_f + Chem->N_Neu + i;
-
+    /* Find counterpart gas phase species index */
+    if(i<=Chem->N_Neu_f)
+      TmpInd = i;
+    else if (i<=Chem->N_Neu+ Chem->N_Neu_f)
+      TmpInd = 2*Chem->N_Neu_f + i;
+    else
+      TmpInd = 2*Chem->N_Neu_f + Chem->N_Neu + i;
     for (k=0; k<Chem->NGrain; k++)
     {
       n = i+p+k*(Chem->N_Neu_f+Chem->N_Neu+Chem->N_Neu_s);
+      sprintf(mantle, "[m%d]", k+1);
+      strcpy(Chem->Species[n].name, Chem->Species[TmpInd].name);
+      strcat(Chem->Species[n].name, mantle);
 
-			sprintf(mantle, "[m%d]", k+1);
-			strcpy(Chem->Species[n].name, Chem->Species[TmpInd].name);
-			strcat(Chem->Species[n].name, mantle);
+      Chem->Species[n].mass = Chem->Species[TmpInd].mass;
+      Chem->Species[n].charge = Chem->Species[TmpInd].charge;
+      Chem->Species[n].type   = 4;
 
-			Chem->Species[n].mass = Chem->Species[TmpInd].mass;
-			Chem->Species[n].charge = Chem->Species[TmpInd].charge;
-			Chem->Species[n].type   = 4;
+      Chem->Species[n].numelem = Chem->Species[TmpInd].numelem;
+      for (j=0; j<Chem->N_Ele_tot; j++)
+	 Chem->Species[n].composition[j] = Chem->Species[TmpInd].composition[j];
 
-			Chem->Species[n].numelem = Chem->Species[TmpInd].numelem;
-			for (j=0; j<Chem->N_Ele_tot; j++)
-				 Chem->Species[n].composition[j] = Chem->Species[TmpInd].composition[j];
+      Chem->Species[n].Eb = Chem->Species[TmpInd].Eb;
+      Chem->Species[n].gsize = (Real)(-k-1); // N.B.: indicator of associated grain type 
 
-			Chem->Species[n].Eb = Chem->Species[TmpInd].Eb;
-			Chem->Species[n].gsize = (Real)(-k-1); // N.B.: indicator of associated grain type 
-    }
+      /* check if gas phase counterpart is single-element species*/
+      for (j=0;j<Chem->N_Ele;j++)
+        if (Chem->Species[TmpInd].numelem==1 && Chem->Species[n].composition[j]!=0)
+        {
+	  if(k==0)
+            n1 = Chem->Elements[j].numsig;
+          Chem->Elements[j].numsig += 1;         //+Chem->NGrain;
+          Chem->Elements[j].single[n1+k] = n; 
 	}
+    }
+  }
 
   fclose(fp);
+   
 
 /*----------- Output All Species -------------*/
 
   OutputSpecies(Chem);
+  ath_pout(0,"NeuInd=%d, SNeuInd=%d, SIonInd=%d, ManInd=%d\n",Chem->NeuInd,Chem->SNeuInd,Chem->SIonInd,Chem->ManInd);
 
   return;
 }
@@ -471,6 +482,7 @@ void Analyze(Chemistry *Chem, int i)
 
   int f, N_Neu, j, k, n, l=0;
   int p = 0;
+  int q1;
   Real mass = 0.0;
 
 /* Find out the compositon of the species */
@@ -481,7 +493,7 @@ void Analyze(Chemistry *Chem, int i)
                         && (Chem->Species[i].name[p] != '+')
                         && (Chem->Species[i].name[p] != '-'))
   {
-		/* k is element index, l is species length*/
+    /* k is element index, l is species length*/
     k = FindElem(Chem, Chem->Species[i].name, p, &l);
     p += l;
     n = 1;
@@ -523,10 +535,24 @@ void Analyze(Chemistry *Chem, int i)
   if ((k == 1) && (Chem->Species[i].charge == 0))
   {
     n = Chem->Elements[l].numsig;
-		// numsig is number of its single elements
+    // numsig is number of its single elements
     Chem->Elements[l].numsig += 1;         //+Chem->NGrain;
     Chem->Elements[l].single[n] = i;      // Neutral single element
-  }
+
+    /* if H2 is not the first single-element species, adjust the order */
+    if ((strcmp(Chem->Species[i].name,"H2")==0) && (n>0))
+    {
+      Chem->Elements[l].single[n] = Chem->Elements[l].single[0];
+      Chem->Elements[l].single[0] = i;
+    }
+    /* if N2 is not the first single-element species, adjust the order */
+    if ((strcmp(Chem->Species[i].name,"N2")==0) && (n>0))
+    {
+      Chem->Elements[l].single[n] = Chem->Elements[l].single[0];
+      Chem->Elements[l].single[0] = i;
+    }
+  }//end if k==1
+
   return;
 }
 
@@ -625,5 +651,31 @@ void OutputSpecies(Chemistry *Chem)
 
   return;
 }
+
+int NeutoMan(Chemistry *Chem, int i, int j)
+{
+  int p,NeuInd,SNeuInd,SIonInd,ManInd;
+  int ext;
+  NeuInd  = 3*Chem->N_Neu_f+1;
+  SNeuInd = NeuInd + 2*Chem->N_Neu;
+  SIonInd = SNeuInd + Chem->N_Neu_s;
+  ManInd  = SIonInd + Chem->N_Ion_s+
+	    Chem->NGrain*(2*Chem->GrCharge+1);
+  ext = (j-1)*(Chem->N_Neu_f+Chem->N_Neu+Chem->N_Neu_s)+ManInd;
+  if (Chem->NGrain>0)
+  {
+    if (i<NeuInd) // index for N_Neu_f
+      p = i+ext;
+    else if (i<SNeuInd) // index for N_Neu
+      p = i-2*Chem->N_Neu_f+ext;
+    else if (i<SIonInd)  // index for N_Neu_s
+      p = i-2*Chem->N_Neu_f-Chem->N_Neu+ext;
+    else
+      p = -1;
+    return p;
+  }else
+  return -2;
+}
+
 
 #endif /* CHEMISTRY */

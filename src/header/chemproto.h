@@ -64,6 +64,8 @@ int evolve(Real te, Real dttry, Real err);
 void jacobi(ChemEvln *Evln, Real *numden, Real **jacob);
 void derivs(ChemEvln *Evln, Real *numden, Real *drv);
 //int EleMakeup(N_Vector &numden, int verbose);
+int ConvertInd (int n);
+int IConvertInd (int m);
 
 /*----------------------------------------------------------------------------*/
 /* init_chemistry.c */

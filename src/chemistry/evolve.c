@@ -25,8 +25,6 @@
 int EleMakeup( int verbose);
 int EleMakeup_sub(int q, Real dn);
 int ChargeMakeup ( Real dne);
-int ConvertInd (int n);
-int IConvertInd (int m);
 
 /* Functions Called by the Solver */
 static int f(realtype t, N_Vector u, N_Vector udot, void *user_data);
@@ -49,7 +47,7 @@ int evolve(Real tend, Real dttry, Real abstol)
 {
 
   realtype t,t1,dt,reltol=1.e-6;
-  Real sum,rate;
+  Real sum,rate, Tn;
   int flag, status,verbose,i,j,k,k1,p,p1,q, Ns,Nsp,Nsp1;
   N_Vector numden,dndt;
   Real *numden1, *dndt1, *numden2;
@@ -60,11 +58,11 @@ int evolve(Real tend, Real dttry, Real abstol)
   Real ad, des,tmp,tmp1;
   AdDes ds;
 
-  dt = 1e4*OneYear; // year
 
-  // Nsp is non-mantle species
+  // Ns=# of Neutral species, Nsp is non-mantle species
   Ns = Chem->N_Neu_f + Chem->N_Neu+Chem->N_Neu_s;
   Nsp = Chem->Ntot-Ns*Chem->NGrain;
+
   dndt = N_VNew_Serial(Nsp);
   numden = N_VNew_Serial(Nsp);
   /* initialize number density for calculation */
@@ -99,13 +97,16 @@ int evolve(Real tend, Real dttry, Real abstol)
         if (EqTerm->type == 4)  // desorption
            des = Evln.K[EqTerm->ind];
       }
-
+      ds.inv[k].d1 = ad;
+      ds.inv[k].d2 = des;
+      /*
       tmp  = 1.+ ad*dt-ad*des*dt*dt/(1.+des*dt);
       tmp1 = 1.+des*dt-ad*des*dt*dt/(1.+ad*dt);
       ds.inv[k].d1 = 1./tmp;
       ds.inv[k].d2 = des*dt/(1.+des*dt)/tmp;
-      ds.inv[k].d3 = 1./tmp1;
-      ds.inv[k].d4 = ad*dt/(1.+ad*dt)/tmp1;
+      ds.inv[k].d3 = ad*dt/(1.+ad*dt)/tmp1;
+      ds.inv[k].d4 = 1./tmp1;
+      */
       /*
       dat.d1 = 1.0 + dt*ad;
       dat.d2 = -ad*dt;
@@ -117,15 +118,16 @@ int evolve(Real tend, Real dttry, Real abstol)
       ds.inv[k].d2 = -coef*dat.d2;
       ds.inv[k].d3 = -coef*dat.d3;
       ds.inv[k].d4 = coef*dat.d1;
-      */
+      */ 
     }
   }
 
 
   clock_t c0, c1; /* Timing the code */
   c0 = clock();
-  verbose = 1;
+  verbose = 0;
   Evln.t = dttry;
+  dt = dttry; // year
 
   ath_pout(0,"\n Chemical evolution started...\n");
 
@@ -134,41 +136,45 @@ int evolve(Real tend, Real dttry, Real abstol)
     //coeff_adj(&Evln);
     for(i=0;i<Nsp;i++)
       NV_Ith_S(numden,i) = Evln.NumDen[i];
-
-    flag = CVode(cvode_mem,Evln.t, numden, &t, CV_NORMAL);
+    //flag = CVode(cvode_mem, Evln.t, numden, &t, CV_NORMAL);
 
     for(i=0;i<Nsp;i++)
       Evln.NumDen[i] = NV_Ith_S(numden,i);
-    //status = EleMakeup(verbose);
-   
-    Evln.t = MIN(1.5*Evln.t, dt+Evln.t);
 
     // update ad/des separately 
-    if (Chem->NGrain>0 && Evln.t>dt)
+    if (Chem->NGrain>0)
     {
       for (k=0;k<Ns;k++){
-	numden1[k]  = Evln.NumDen[ConvertInd(k)]*ds.inv[k].d1 +
-		      Evln.NumDen[ConvertInd(k+Ns)]*ds.inv[k].d2;
-	numden1[k+Ns] = Evln.NumDen[ConvertInd(k+Ns)]*ds.inv[k].d3 +
-		      Evln.NumDen[ConvertInd(k)]*ds.inv[k].d4;
+	p   = ConvertInd(k);
+	p1  = ConvertInd(k+Ns);
+	Tn  = Evln.NumDen[p]+Evln.NumDen[p1];
+	numden1[k]  = (Evln.NumDen[p]-Tn*ds.inv[k].d2
+          /(ds.inv[k].d1+ds.inv[k].d2))*
+	  exp(-(ds.inv[k].d1+ds.inv[k].d2)*dt)+
+	  Tn*ds.inv[k].d2/(ds.inv[k].d1+ds.inv[k].d2);
+	numden1[k+Ns] = Tn-numden1[k];
       }
+
       for (k=0;k<Nsp1;k++){
          p = ConvertInd(k);
-         Evln.NumDen[p] = numden1[k];
+         //Evln.NumDen[p] = numden1[k];
       }
 
     }
+    dt = MIN(1.5*Evln.t, 1e4*OneYear+Evln.t)-Evln.t;
+    Evln.t = MIN(1.5*Evln.t, 1e4*OneYear+Evln.t);
 
+    status = EleMakeup(verbose);
+    for(i=0;i<Nsp;i++)
+      ath_pout(0,"sp=%s, #=%10e\n",Chem->Species[i].name,Evln.NumDen[i]);
+   for (i=0; i<Chem->N_Ele; i++)
+      ath_pout(0,"Ele=%s, #=%10e\n",Chem->Elements[i].name,Chem->Elements[i].abundance);
     ath_pout(0,"evolution time (yr) = %e\n",Evln.t/OneYear);
-    //status = EleMakeup(verbose);
 
     /* ends if evolution time is too large */
     c1 = clock();
     if (((c1-c0)/CLOCKS_PER_SEC > 300.0) || (status < 0))
       break;
-
-    //Evln.t  *=1.5;
-    //Evln.t = MIN(1.5*Evln.t, 1e4*OneYear+Evln.t);
   }
 
   /* finalize and return the status */
@@ -176,15 +182,8 @@ int evolve(Real tend, Real dttry, Real abstol)
   N_VDestroy_Serial(numden);
   CVodeFree(&cvode_mem);
 
-  /*
-  if (Chem->NGrain>0){
-    N_VDestroy_Serial(dndt1);
-    N_VDestroy_Serial(numden1);
-  }
-  */
-
   ath_pout(0,"Evolution completed at t=%e yr, with Abn(e-)=%e.\n",
-     Evln.t/OneYear, Evln.NumDen[0]*Evln.Abn_Den);
+    Evln.t/OneYear, Evln.NumDen[0]*Evln.Abn_Den);
   return(0);
 }
 
@@ -198,7 +197,7 @@ static int f(realtype t, N_Vector numden, N_Vector dndt, void *user_data)
   Real sum,rate;
   EquationTerm *EqTerm;
   Nsp = Chem.Ntot-(Chem.N_Neu_f +
-		    Chem.N_Neu + Chem.N_Neu_s)*Chem.NGrain;
+    Chem.N_Neu + Chem.N_Neu_s)*Chem.NGrain;
   for (k=0; k<Nsp; k++)
   {
     sum  = 0.0;
@@ -219,72 +218,6 @@ static int f(realtype t, N_Vector numden, N_Vector dndt, void *user_data)
   }
   return(0);
 }
-
-/*----------------------------------------------------------------------------*/
-/* user provided routine for calculating the Jacobi matrix
- *  */
-void rmat(Real *numden1, Real *jacob,Real dt)
-{
-  int i, j, k, l, n, p, q, a, N;
-  Real Jt;
-  EquationTerm *EqTerm;
-  N = Chem.NGrain+1;
-
-  /* Calculation */
-  for (i=0; i<N; i++)  /* loop over all species */
-  {
-    for (k=0;k<N;k++){
-      jacob[i,k] = 0.0;
-      q = ConvertInd(i+k*N);
-
-      n = Chem.Equations[q].NTerm;
-      for (j=0; j<n; j++) /* loop over all reactions of this species */
-      {
-        EqTerm = &(Chem.Equations[q].EqTerm[j]);
-        if ((EqTerm->type) == 3 || (EqTerm->type ==4)){
-          Jt = Evln.K[EqTerm->ind] * EqTerm->dir;
-          jacob[i,k] += Jt;  /* Obtain the Jacobian from this term */
-        }
-      }
-      if(k==i)
-        jacob[i,k] += 1.;
-    }
-  }
-  return;
-}
-
-static int f1(realtype t2, N_Vector numden1, N_Vector dndt1, void *user_data)
-{
-  int i, j, k, p, q, Nsp1, Ns;
-  Real sum, rate;
-  EquationTerm *EqTerm;
-  Ns = Chem.N_Neu_f+Chem.N_Neu+Chem.N_Neu_s;
-  Nsp1    = (Chem.NGrain+1)*Ns;
-
-  for (k=0; k<Nsp1; k++)
-  {
-    q = ConvertInd(k);
-    sum  = 0.0;
-    for (i=0; i<Chem.Equations[q].NTerm; i++)
-    {
-      EqTerm = &(Chem.Equations[q].EqTerm[i]);
-      if ((EqTerm->type) == 3 || (EqTerm->type ==4)){
-        rate = Evln.K[EqTerm->ind] * EqTerm->dir;
-        for (j=0; j<EqTerm->N; j++)
-        {
-          p = EqTerm->lab[j];
-          rate *= NV_Ith_S(numden1,IConvertInd(p));
-        }
-        sum += rate;
-      }
-    }
-   NV_Ith_S(dndt1,k) = sum;
-   //ath_pout(0,"sp=%s, rate=%10e\n",Chem.Species[q].name,sum);
-  }
-  return(0);
-}
-
-
 
 int ConvertInd (int i)
 {

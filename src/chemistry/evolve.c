@@ -28,10 +28,9 @@ int ChargeMakeup ( Real dne);
 
 /* Functions Called by the Solver */
 static int f(realtype t, N_Vector u, N_Vector udot, void *user_data);
-static int f1(realtype t, N_Vector u, N_Vector udot, void *user_data);
 static int check_flag(void *flagvalue, char *funcname, int opt);
-void rmat(Real *numden1, Real *jacob, Real dt);
 
+/* inverse matrix */
 void inverse(Real* A, int N)
 {
   int IPIV[N];
@@ -50,9 +49,9 @@ int evolve(Real tend, Real dttry, Real abstol)
   Real sum,rate, Tn;
   int flag, status,verbose,i,j,k,k1,p,p1,q, Ns,Nsp,Nsp1;
   N_Vector numden,dndt;
-  Real *numden1, *dndt1, *numden2;
+  Real *numden1;
   EquationTerm *EqTerm;
-  void* cvode_mem, *cvode_mem1;
+  void* cvode_mem;
   Chemistry *Chem = Evln.Chem;
   cvode_mem = NULL;
   Real ad, des,tmp,tmp1;
@@ -62,9 +61,10 @@ int evolve(Real tend, Real dttry, Real abstol)
   // Ns=# of Neutral species, Nsp is non-mantle species
   Ns = Chem->N_Neu_f + Chem->N_Neu+Chem->N_Neu_s;
   Nsp = Chem->Ntot-Ns*Chem->NGrain;
-  Nsp = Chem->Ntot;
+
   dndt = N_VNew_Serial(Nsp);
   numden = N_VNew_Serial(Nsp);
+
   /* initialize number density for calculation */
   for(i=0;i<Nsp;i++){
     NV_Ith_S(numden,i) = Evln.NumDen[i]; 
@@ -98,7 +98,7 @@ int evolve(Real tend, Real dttry, Real abstol)
            des = Evln.K[EqTerm->ind];
       }
       ds.inv[k].d1 = ad;
-      ds.inv[k].d2 = des;
+      ds.inv[k].d2 = des*0;
       /*
       tmp  = 1.+ ad*dt-ad*des*dt*dt/(1.+des*dt);
       tmp1 = 1.+des*dt-ad*des*dt*dt/(1.+ad*dt);
@@ -137,9 +137,11 @@ int evolve(Real tend, Real dttry, Real abstol)
     for(i=0;i<Nsp;i++)
       NV_Ith_S(numden,i) = Evln.NumDen[i];
     //flag = CVode(cvode_mem, Evln.t, numden, &t, CV_NORMAL);
-
     for(i=0;i<Nsp;i++)
       Evln.NumDen[i] = NV_Ith_S(numden,i);
+
+    //for(i=0;i<Chem->Ntot;i++)
+     // ath_pout(0,"A:sp=%s, #=%10e\n",Chem->Species[i].name,Evln.NumDen[i]);
 
     // update ad/des separately 
     if (Chem->NGrain>0)
@@ -153,25 +155,50 @@ int evolve(Real tend, Real dttry, Real abstol)
 	  exp(-(ds.inv[k].d1+ds.inv[k].d2)*dt)+
 	  Tn*ds.inv[k].d2/(ds.inv[k].d1+ds.inv[k].d2);
 	numden1[k+Ns] = Tn-numden1[k];
-	//ath_pout(0,"sp=%s,exp=%10e,d2/d1+d2 = %10e\n",Chem->Species[p].name,exp(-(ds.inv[k].d1+ds.inv[k].d2)*dt),ds.inv[k].d2/(ds.inv[k].d1+ds.inv[k].d2));
+	ath_pout(0,"sp1=%s,sp2=%s\n",Chem->Species[p].name,Chem->Species[p1].name);
+	ath_pout(0,"Tn=%10e, #1=%10e, #2=%10e\n",Tn,numden1[k],numden1[k+Ns]);
       }
 
       for (k=0;k<Nsp1;k++){
-         p = ConvertInd(k);
-         Evln.NumDen[p] = numden1[k];
+        p = ConvertInd(k);
+        Evln.NumDen[p] = numden1[k];
+	ath_pout(0,"sp=%s\n",Chem->Species[p].name);
       }
-
     }
-    dt = MIN(1.5*Evln.t, 1e0*OneYear+Evln.t)-Evln.t;
-    Evln.t = MIN(1.5*Evln.t, 1e0*OneYear+Evln.t);
+    dt = MIN(1.5*Evln.t, 1e2*OneYear+Evln.t)-Evln.t;
+    Evln.t = MIN(1.5*Evln.t, 1e2*OneYear+Evln.t);
+    //for(i=0;i<Chem->Ntot;i++)
+    // ath_pout(0,"B:sp=%s, #=%10e\n",Chem->Species[i].name,Evln.NumDen[i]);
 
-    //status = EleMakeup(verbose);
+    status = EleMakeup(verbose);
+
     ath_pout(0,"evolution time (yr) = %e\n",Evln.t/OneYear);
 
     /* ends if evolution time is too large */
     c1 = clock();
     if (((c1-c0)/CLOCKS_PER_SEC > 300.0) || (status < 0))
       break;
+  }
+
+  Real *EleNumDen;        /* Number density of each element */
+  /* Initialization */
+  EleNumDen = (Real*)calloc_1d_array((Chem->N_Ele+Chem->NGrain), sizeof(Real));
+
+  for (i=0; i<Chem->N_Ele + Chem->NGrain; i++) {
+    EleNumDen[i] = 0.0;
+  }
+
+  /* Calculate the elemental density */
+  for (i=0; i<Chem->Ntot; i++)
+  {
+    for (j=0; j<Chem->N_Ele+Chem->NGrain; j++)
+    {
+     if (Chem->Species[i].composition[j] > 0)
+        EleNumDen[j] += Evln.NumDen[i]*Chem->Species[i].composition[j];
+    }
+  }
+  for (i=0; i<Chem->N_Ele + Chem->NGrain; i++) {
+    ath_pout(0,"sp=%s, #=%10e\n",Chem->Elements[i].name, EleNumDen[i]);
   }
 
   /* finalize and return the status */
@@ -195,14 +222,13 @@ static int f(realtype t, N_Vector numden, N_Vector dndt, void *user_data)
   EquationTerm *EqTerm;
   Nsp = Chem.Ntot-(Chem.N_Neu_f +
     Chem.N_Neu + Chem.N_Neu_s)*Chem.NGrain;
-  Nsp = Chem.Ntot;
   for (k=0; k<Nsp; k++)
   {
     sum  = 0.0;
     for (i=0; i<Chem.Equations[k].NTerm; i++)
     {
       EqTerm = &(Chem.Equations[k].EqTerm[i]);
-      //if ((EqTerm->type) != 3 && (EqTerm->type !=4)){
+      if ((EqTerm->type) != 3 && (EqTerm->type !=4)){
         rate = Evln.K[EqTerm->ind] * EqTerm->dir;
         for (j=0; j<EqTerm->N; j++)
         {
@@ -210,7 +236,7 @@ static int f(realtype t, N_Vector numden, N_Vector dndt, void *user_data)
           rate *= NV_Ith_S(numden,p);
         }
         sum += rate;
-      //}
+      }
     }
    NV_Ith_S(dndt,k) = sum;
   }
@@ -317,7 +343,6 @@ int EleMakeup(int verbose)
        }
        frac = disp/MAX(TINY_NUMBER,den);
 
-
        for (j=0; j<Chem->Elements[i].numsig; j++)
        {
          l = Chem->Elements[i].single[j];
@@ -332,13 +357,12 @@ int EleMakeup(int verbose)
      {
        status = EleMakeup_sub(i, disp);
      }
-     
       
      if (status < 0)
        return status;
    } // loop for i 0-Chem.Ele
 
-/* Make up for the grain densities */
+  /* Make up for the grain densities */
   for (i=Chem->N_Ele; i<Chem->N_Ele+Chem->NGrain; i++)
   {
     /* Calculate the discrepency */
@@ -350,22 +374,22 @@ int EleMakeup(int verbose)
     /* Density make up */
     frac = disp / MAX(TINY_NUMBER,EleNumDen[i]);
 
-    for (j=Chem->GrInd; j<Chem->Ntot; j++)
+    //for (j=Chem->GrInd; j<Chem->Ntot; j++)
+    for (j=Chem->GrInd; j<Chem->ManInd; j++)
     {
       if (Chem->Species[j].composition[i] > 0)
         Evln.NumDen[j] *= (1.0-frac);
     }
   }
 
-/* Calculate the charge density */
-
+  /* Calculate the charge density */
   for (i=0; i<Chem->Ntot; i++)
   {
     if ((i != 0) && (Chem->Species[i].charge != 0))
       ChargeDen += Evln.NumDen[i] * Chem->Species[i].charge;
   }
 
-/* Make up for the charge density */
+  /* Make up for the charge density */
 
   if (ChargeDen >= 0.0)
   {
@@ -374,7 +398,6 @@ int EleMakeup(int verbose)
   else
   {
     Evln.NumDen[0] = 0.0;
-
     status = ChargeMakeup( -ChargeDen);
   }
 
@@ -464,10 +487,13 @@ int ChargeMakeup(Real dne)
     negcharge[j] = 0.0;
 
   /* calculate the total negative charge */
-  for (i=Chem->GrInd; i<Chem->Ntot; i++)
+  //for (i=Chem->GrInd; i<Chem->Ntot; i++)
+  for (i=Chem->GrInd; i<Chem->ManInd; i++)
   {
     /* get the index of grain type */
     j = (i-Chem->GrInd)/(2*Chem->GrCharge+1);
+    if(j>=Chem->NGrain)
+      ath_perr(0,"Grain type index error in evolve.c!\n");
 
     if (Chem->Species[i].charge < 0)
     {
@@ -487,7 +513,7 @@ int ChargeMakeup(Real dne)
   }
   else
   {
-    for (i=Chem->GrInd; i<Chem->Ntot; i++)
+    for (i=Chem->GrInd; i<Chem->ManInd; i++)
     {
       if (Chem->Species[i].charge < 0)
       {

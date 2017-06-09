@@ -153,8 +153,8 @@ void init_numberden(ChemEvln *Evln, Real rho, int verbose)
 
   /* output element abundance for comparison */
   for (j=0; j<Chem->N_Ele_tot; j++)
-    ath_pout(0,"%3s abundance: %1.15f\n",
-      Chem->Elements[j].name,Chem->Elements[j].abundance);
+    ath_pout(0,"%3s abundance: %10e\n",
+      Chem->Elements[j].name,Chem->Elements[j].abundance/Evln->Abn_Den);
 
   /* initialize species as their first single element */
   }else{
@@ -175,8 +175,7 @@ void init_numberden(ChemEvln *Evln, Real rho, int verbose)
    }
  }
 
-/* Calculate the density variation scale */
-
+  /* Calculate the density variation scale */
   denscale(Evln, verbose);
   
   return;
@@ -254,6 +253,5 @@ void denscale(ChemEvln *Evln, int vb)
 
   return;
 }
-
 
 #endif /* CHEMISTRY */

@@ -143,7 +143,8 @@ void Cal_recomb(ChemEvln *Evln, Real Bmin, Real Bmax, int  nB,   Real Dt,
   /* evolve the chemistry network for Dt */
 
   dttry = 0.1 * Dt;
-  evolve(&myEvln, Dt, &dttry, ChemErr);
+  //evolve(&myEvln, Dt, &dttry, ChemErr);
+  evolve(Dt, dttry, ChemErr);
 
   /* calculate the recombination time */
 

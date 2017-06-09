@@ -8,17 +8,16 @@ LIBTOOL  = $(SHELL) $(builddir)/libtool
 CPP      = gcc -E
 CPPFLAGS =
 CC       = gcc
-#CFLAGS   = -llapack -lblas
-CFLAGS   = -llapack
+CFLAGS   = -llapack -lblas
 LDFLAGS  = 
 
-#SUNDIALS_INCS = -I$(builddir)/include
-#SUNDIALS_LIBS = $(builddir)/src/cvode/libsundials_cvode.la   \
-#                $(builddir)/src/nvec_ser/libsundials_nvecserial.la
+SUNDIALS_INCS = -I$(builddir)/include
+SUNDIALS_LIBS = $(builddir)/src/cvode/libsundials_cvode.la   \
+                $(builddir)/src/nvec_ser/libsundials_nvecserial.la
 
 #####
 EXE_DIR    := bin/
-EXECUTABLE := $(EXE_DIR)react
+EXECUTABLE := $(EXE_DIR)react1
 SRC_FILES  := $(wildcard src/chemistry/*.c)\
               $(wildcard src/*.c)
 OBJ_DIR    := obj/
@@ -38,19 +37,19 @@ $(OBJ_DIR):
 	mkdir -p $(OBJ_DIR)
 
 # Create Objects from source files
-#$(OBJ_DIR)%.o : %.c
-#	$(CC) $(CPPFLAGS) $(SUNDIALS_INCS) \
-#	  $(CFLAGS) -c $< -o $@
 $(OBJ_DIR)%.o : %.c
-	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+	$(CC) $(CPPFLAGS) $(SUNDIALS_INCS) \
+	$(CFLAGS) -c $< -o $@
+#$(OBJ_DIR)%.o : %.c
+#	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 # Link the objects to executable
-#$(EXECUTABLE) : $(OBJ_FILES)
-#	$(LIBTOOL) --mode=link $(CC) ${OPT} -g -o $@ \
-#          ${OBJ_FILES} $(CFLAGS) $(LDFLAGS) $(SUNDIALS_LIBS) 
-
 $(EXECUTABLE) : $(OBJ_FILES)
-	$(CC) ${OPT} -g -o $@ ${OBJ_FILES} $(CFLAGS) $(LDFLAGS)
+	$(LIBTOOL) --mode=link $(CC) ${OPT} -g -o $@ \
+         ${OBJ_FILES} $(CFLAGS) $(LDFLAGS) $(SUNDIALS_LIBS) 
+
+#$(EXECUTABLE) : $(OBJ_FILES)
+#	$(CC) ${OPT} -g -o $@ ${OBJ_FILES} $(CFLAGS) $(LDFLAGS)
 # clean source file
 .PHONY: clean
 clean :

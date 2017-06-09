@@ -441,6 +441,8 @@ void init_species(Chemistry *Chem)
 	}
     }
   }
+  Chem->Nsp = Chem->Ntot-Chem->NGrain*(Chem->N_Neu_f 
+        + Chem->N_Neu+Chem->N_Neu_s);
 
   fclose(fp);
    

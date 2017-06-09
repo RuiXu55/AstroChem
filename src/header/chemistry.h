@@ -60,15 +60,9 @@ typedef struct SpeciesInfo_s {
 /* mantle ad/des rate */
 typedef struct AdDesCoef_s{
   int ind;    /* N =  NGrain + 1 */
-  Real d1;
-  Real d2;
-  Real d3;
-  Real d4;
+  Real ad;
+  Real des;
 }AdDesCoef;
-
-typedef struct AdDes_s{
- AdDesCoef *inv; 
-}AdDes;
 
 
 /*-----------------------------------------------------------------------------
@@ -145,6 +139,8 @@ typedef struct Chemistry_s {
   int N_Neu_s;        /* # of neutral species without inoized counterpart */
   int N_Ion_s;        /* # of charged species without neutral counterpart */
   int Ntot;           /* Total Number of species */
+  int Nsp;            /* # of non-mantle species */
+  int NNeuT;          /* Total # of neutral species */
 
   int NGrain;         /* # of grain types */
   int GrCharge;       /* Maximum charge of a grain */
@@ -156,7 +152,7 @@ typedef struct Chemistry_s {
   int SNeuInd;        /* Starting index of special neutrals (if exist)*/
   int SIonInd;        /* Starting index of special ions (if exist) */
   int GrInd;          /* Starting index of grains (if exist) */
-	int ManInd;         /* Starting index of mantle species (if exist) */
+  int ManInd;         /* Starting index of mantle species (if exist) */
 
   int NReaction;      /* Total Number of reactions */
   int Reaction_size;  /* Size of the reaction array */
@@ -173,6 +169,7 @@ typedef struct Chemistry_s {
   /* Array of evolution equations of all species */
   EquationInfo *Equations;   /* 0..Ntot-1 */
 
+  AdDesCoef *AdDesRate; 
 
 }Chemistry;
 

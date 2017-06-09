@@ -81,11 +81,12 @@ int  ReactionCmp(Chemistry *Chem, int n);
 void init_reactions(Chemistry *Chem)
 {
   FILE *fp;
-  int h, i, j, k, l, m, n, sgn;
+  int h, i, j, k, l, m, n, sgn, q;
   int Ns_Gr = 2*Chem->GrCharge+1;
   int speclab[10];
   char line[MAXLEN],name[NL_SPE],fname[20],mantle[NL_SPE];
   char name1[NL_SPE],name2[NL_SPE],name3[NL_SPE],name4[NL_SPE];
+  EquationTerm *EqTerm;
   Real coef;
 
   sprintf(fname,"%s",par_gets("job","read_reaction"));
@@ -674,8 +675,7 @@ void init_reactions(Chemistry *Chem)
       }
     } 
   }
-
-
+  
   fclose(fp);
 
 /*----------------------- End of constructing reactions ----------------------*/

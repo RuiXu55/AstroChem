@@ -96,7 +96,7 @@ for(k=zs;k<ze;k++){
   CalCoeff       (&Evln, Tg, verbose);       /* all other reactions */
   /* evolve the network from 0 to tend */
   Evln.t = 0.0;
-  evolve(tend, dttry,atol);
+  evolve(&Evln, tend, &dttry,atol);
   /* chemical network reduction */
   //species_reduction(&Evln);
   //select_reaction(&Evln);

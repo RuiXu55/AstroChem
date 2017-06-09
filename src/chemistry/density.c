@@ -71,7 +71,7 @@ void init_numberden(ChemEvln *Evln, Real rho, int verbose)
     Evln->NumDen[i] = 0.0;
 
   if(initcond>0)
-	{
+  {
     /* Reset element abundance to zero */
     for (i=0; i<Chem->N_Ele_tot; i++)
       Chem->Elements[i].abundance = 0.0;
@@ -94,19 +94,19 @@ void init_numberden(ChemEvln *Evln, Real rho, int verbose)
       fscanf(fp, "%s", name);
       fscanf(fp, "%lf\n",&abun);
       for (p=1;p<Chem->Ntot;p++) {
-		    if(strcmp(Chem->Species[p].name, name)==0)
-			  {
-					/* calculate species relative abundance */
+    if(strcmp(Chem->Species[p].name, name)==0)
+  {
+/* calculate species relative abundance */
           Evln->NumDen[p] = abun;
           Spe = &(Chem->Species[p]);
           sumgas += Spe->mass*abun;
-	        /* calculate element abundance */
-          for (j=0; j<Chem->N_Ele_tot; j++)
-					  Chem->Elements[j].abundance += abun*MAX(Spe->composition[j],0);
-			    break;
-			  }
+        /* calculate element abundance */
+         for (j=0; j<Chem->N_Ele_tot; j++)
+          Chem->Elements[j].abundance += abun*MAX(Spe->composition[j],0);
+       break;
+      }
       }// end loop for p
-	  }/* end iteration for i over all input species */
+  }/* end iteration for i over all input species */
 
   /* Calculate the relative charge density */
   for (i=0; i<Chem->Ntot; i++)

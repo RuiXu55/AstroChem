@@ -111,7 +111,7 @@ int evolve(ChemEvln *Evln, Real te, Real *dttry, Real err)
     ind += 1;
     dt1 += dt;
     //if (Chem->NGrain>0 && (ind>10 || Evln->t>OneYear))
-    if (Chem->NGrain>0 && (ind>200 || dt1/OneYear>1e2) )
+    if (Chem->NGrain>0 && (ind>200 || dt1/OneYear>1e3) )
     {
       ath_pout(0,"Dt=%10e\n",dt1/OneYear);
       for (k=0;k<Chem->NNeuT;k++){

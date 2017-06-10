@@ -111,7 +111,7 @@ int evolve(ChemEvln *Evln, Real te, Real *dttry, Real err)
     ind += 1;
     dt1 += dt;
     //if (Chem->NGrain>0 && (ind>10 || Evln->t>OneYear))
-    if (Chem->NGrain>0 && (ind>200 || dt1/OneYear>5e3) )
+    if (Chem->NGrain>0 && (ind>200 || dt1/OneYear>1e2) )
     {
       ath_pout(0,"Dt=%10e\n",dt1/OneYear);
       for (k=0;k<Chem->NNeuT;k++){
@@ -151,7 +151,7 @@ int evolve(ChemEvln *Evln, Real te, Real *dttry, Real err)
     c1 = clock();
 
     /* if evolution is too time consuming, or element makeup fails, quit */
-    if ((c1-c0)/CLOCKS_PER_SEC > 3600.0)
+    if ((c1-c0)/CLOCKS_PER_SEC > 2*3600.0)
     {
       status = 1;
       break; 

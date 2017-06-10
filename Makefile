@@ -17,7 +17,7 @@ SUNDIALS_LIBS = $(builddir)/src/cvode/libsundials_cvode.la   \
 
 #####
 EXE_DIR    := bin/
-EXECUTABLE := $(EXE_DIR)react1
+EXECUTABLE := $(EXE_DIR)reactT
 SRC_FILES  := $(wildcard src/chemistry/*.c)\
               $(wildcard src/*.c)
 OBJ_DIR    := obj/

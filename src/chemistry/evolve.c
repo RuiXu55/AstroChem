@@ -62,7 +62,7 @@ int evolve(Real tend, Real dttry, Real abstol)
   // Ns=# of Neutral species, Nsp is non-mantle species
   Ns = Chem->N_Neu_f + Chem->N_Neu+Chem->N_Neu_s;
   Nsp = Chem->Ntot-Ns*Chem->NGrain;
-
+  Nsp = Chem->Ntot;
   dndt = N_VNew_Serial(Nsp);
   numden = N_VNew_Serial(Nsp);
 
@@ -120,11 +120,11 @@ int evolve(Real tend, Real dttry, Real abstol)
 
       for (k=0;k<2*Chem->NNeuT;k++){
         p = ConvertInd(k);
-        Evln.NumDen[p] = numden1[k];
+        //Evln.NumDen[p] = numden1[k];
       }
     }
 
-    dt = MIN(1.5*Evln.t, 1e1*OneYear+Evln.t)-Evln.t;
+    dt = MIN(1.5*Evln.t, 1e2*OneYear+Evln.t)-Evln.t;
     Evln.t += dt;
 
     status = EleMakeup(verbose);
@@ -159,13 +159,14 @@ static int f(realtype t, N_Vector numden, N_Vector dndt, void *user_data)
   EquationTerm *EqTerm;
   Nsp = Chem.Ntot-(Chem.N_Neu_f +
     Chem.N_Neu + Chem.N_Neu_s)*Chem.NGrain;
+  Nsp = Chem.Ntot;
   for (k=0; k<Nsp; k++)
   {
     sum  = 0.0;
     for (i=0; i<Chem.Equations[k].NTerm; i++)
     {
       EqTerm = &(Chem.Equations[k].EqTerm[i]);
-      if ((EqTerm->type) != 3 && (EqTerm->type !=4)){
+      //if ((EqTerm->type) != 3 && (EqTerm->type !=4)){
         rate = Evln.K[EqTerm->ind] * EqTerm->dir;
         for (j=0; j<EqTerm->N; j++)
         {
@@ -173,7 +174,7 @@ static int f(realtype t, N_Vector numden, N_Vector dndt, void *user_data)
           rate *= NV_Ith_S(numden,p);
         }
         sum += rate;
-      }
+      //}
     }
    NV_Ith_S(dndt,k) = sum;
   }

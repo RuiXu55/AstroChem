@@ -59,7 +59,7 @@ int evolve(ChemEvln *Evln, Real te, Real *dttry, Real err)
   clock_t c0, c1; /* Timing the code */
   Chemistry *Chem = Evln->Chem;
   Real Tn;
-  //Chem->Nsp = Chem->Ntot;
+  Chem->Nsp = Chem->Ntot;
 
   dn_o_dt  = (Real*)calloc_1d_array(Chem->Nsp, sizeof(Real));
   numden   = (Real*)calloc_1d_array(Chem->Nsp, sizeof(Real));
@@ -108,6 +108,7 @@ int evolve(ChemEvln *Evln, Real te, Real *dttry, Real err)
     Evln->t += dt;
 
     /* update numden of mantle species */
+    /*
     ind += 1;
     dt1 += dt;
     //if (Chem->NGrain>0 && (ind>10 || Evln->t>OneYear))
@@ -131,6 +132,7 @@ int evolve(ChemEvln *Evln, Real te, Real *dttry, Real err)
       ind=0;
       dt1 = 0.0;
     }
+    */
 
     if (Evln->t > tp) /* verbose control */
     {
@@ -201,7 +203,7 @@ void jacobi(ChemEvln *Evln, Real *numden, Real **jacob)
 
       for (k=0; k<EqTerm->N; k++)  /* loop over all reactants */
       {
-        if ((EqTerm->type) != 3 && (EqTerm->type !=4)){
+        //if ((EqTerm->type) != 3 && (EqTerm->type !=4)){
           Jt = Evln->K[EqTerm->ind] * EqTerm->dir;
 
           for (l=0; l<EqTerm->N; l++)
@@ -215,7 +217,7 @@ void jacobi(ChemEvln *Evln, Real *numden, Real **jacob)
           if (p>=Chem->Nsp)
             ath_perr(0,"Error! index too large in Jacobian!\n");
           jacob[i][p] += Jt;  /* Obtain the Jacobian from this term */
-	}
+	//}
       }//end for k
     }
   }
@@ -243,14 +245,14 @@ void derivs(ChemEvln *Evln, Real *numden, Real *drv)
       EqTerm = &(Chem->Equations[k].EqTerm[i]);
 
       rate = Evln->K[EqTerm->ind] * EqTerm->dir;
-      if ((EqTerm->type) != 3 && (EqTerm->type !=4)){
+      //if ((EqTerm->type) != 3 && (EqTerm->type !=4)){
         for (j=0; j<EqTerm->N; j++)
         {
           p = EqTerm->lab[j];
           rate *= numden[p];
         }
         sum += rate;
-      }
+      //}
     }
 
     drv[k] = sum;

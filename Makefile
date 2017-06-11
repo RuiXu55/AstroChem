@@ -18,7 +18,7 @@ LDFLAGS  =
 
 #####
 EXE_DIR    := bin/
-EXECUTABLE := $(EXE_DIR)react
+EXECUTABLE := $(EXE_DIR)reactT
 SRC_FILES  := $(wildcard src/chemistry/*.c)\
               $(wildcard src/*.c)
 OBJ_DIR    := obj/

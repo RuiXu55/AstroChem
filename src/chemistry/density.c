@@ -71,6 +71,7 @@ void init_numberden(ChemEvln *Evln, Real rho, int verbose)
   // initcond>0 user defined initial condition
   if(initcond>0) 
   {
+  ath_pout(0,"\n molecular initial number density!\n");
   /* Reset element abundance to zero */
   for (i=0; i<Chem->N_Ele_tot; i++)
      Chem->Elements[i].abundance = 0.0;
@@ -159,6 +160,7 @@ void init_numberden(ChemEvln *Evln, Real rho, int verbose)
   /* initialize species as their first single element */
   }else{
    /* Calculate abundance - number density ratio */
+   ath_pout(0,"\n Atomic initial number density!\n");
    sum = 0.0;
    for (i=0; i<Chem->N_Ele+Chem->NGrain; i++) {
      sum += Ele[i].mass * Ele[i].abundance;

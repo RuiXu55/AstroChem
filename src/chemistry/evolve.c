@@ -59,7 +59,6 @@ int evolve(ChemEvln *Evln, Real te, Real *dttry, Real err)
   clock_t c0, c1; /* Timing the code */
   Chemistry *Chem = Evln->Chem;
   Real Tn;
-  Chem->Nsp = Chem->Ntot;
 
   dn_o_dt  = (Real*)calloc_1d_array(Chem->Nsp, sizeof(Real));
   numden   = (Real*)calloc_1d_array(Chem->Nsp, sizeof(Real));
@@ -107,14 +106,13 @@ int evolve(ChemEvln *Evln, Real te, Real *dttry, Real err)
 
     Evln->t += dt;
 
+    ath_pout(0,"Evln.t=%2.4f\n",Evln->t/OneYear);
     /* update numden of mantle species */
-    /*
     ind += 1;
     dt1 += dt;
-    //if (Chem->NGrain>0 && (ind>10 || Evln->t>OneYear))
-    if (Chem->NGrain>0 && (ind>200 || dt1/OneYear>1e3) )
+    if (Chem->NGrain>0 && (ind>0 || dt1/OneYear>1e3) )
     {
-      ath_pout(0,"Dt=%10e\n",dt1/OneYear);
+      ath_pout(0,"Evln.t=%2.4f, Dt=%10e\n",Evln->t/OneYear,dt1/OneYear);
       for (k=0;k<Chem->NNeuT;k++){
 	p   = ConvertInd(k);
 	p1  = ConvertInd(k+Chem->NNeuT);
@@ -132,7 +130,6 @@ int evolve(ChemEvln *Evln, Real te, Real *dttry, Real err)
       ind=0;
       dt1 = 0.0;
     }
-    */
 
     if (Evln->t > tp) /* verbose control */
     {
@@ -203,7 +200,7 @@ void jacobi(ChemEvln *Evln, Real *numden, Real **jacob)
 
       for (k=0; k<EqTerm->N; k++)  /* loop over all reactants */
       {
-        //if ((EqTerm->type) != 3 && (EqTerm->type !=4)){
+        if ((EqTerm->type) != 3 && (EqTerm->type !=4)){
           Jt = Evln->K[EqTerm->ind] * EqTerm->dir;
 
           for (l=0; l<EqTerm->N; l++)
@@ -217,7 +214,7 @@ void jacobi(ChemEvln *Evln, Real *numden, Real **jacob)
           if (p>=Chem->Nsp)
             ath_perr(0,"Error! index too large in Jacobian!\n");
           jacob[i][p] += Jt;  /* Obtain the Jacobian from this term */
-	//}
+	}
       }//end for k
     }
   }
@@ -245,14 +242,14 @@ void derivs(ChemEvln *Evln, Real *numden, Real *drv)
       EqTerm = &(Chem->Equations[k].EqTerm[i]);
 
       rate = Evln->K[EqTerm->ind] * EqTerm->dir;
-      //if ((EqTerm->type) != 3 && (EqTerm->type !=4)){
+      if ((EqTerm->type) != 3 && (EqTerm->type !=4)){
         for (j=0; j<EqTerm->N; j++)
         {
           p = EqTerm->lab[j];
           rate *= numden[p];
         }
         sum += rate;
-      //}
+      }
     }
 
     drv[k] = sum;
@@ -573,14 +570,11 @@ int AdDesRate(ChemEvln *Evln)
   int q,k,i;
   /* add ad/des reactions rate */
   if (Chem->NGrain>0){
-    ath_pout(0,"start read ad/des\n");
     Chem->NNeuT = Chem->N_Neu_f+Chem->N_Neu+Chem->N_Neu_s;
     Chem->AdDesRate = (AdDesCoef*)calloc_1d_array(Chem->NNeuT,sizeof(AdDesCoef));
 
-    ath_pout(0,"start iterate: neut=%d\n",Chem->NNeuT);
     for (k=0;k<Chem->NNeuT;k++){
       q = ConvertInd(k);
-      ath_pout(0,"sp1=%s,sp2=%s\n",Chem->Species[k].name,Chem->Species[q].name);
       for (i=0; i<Chem->Equations[q].NTerm; i++)
       {
         EqTerm = &(Chem->Equations[q].EqTerm[i]);

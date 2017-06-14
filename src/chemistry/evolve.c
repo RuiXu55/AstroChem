@@ -116,6 +116,10 @@ int evolve(Real tend, Real dttry, Real abstol)
            exp(-(Chem->AdDesRate[k].ad+Chem->AdDesRate[k].des)*dt)+
 	   Tn*Chem->AdDesRate[k].des/(Chem->AdDesRate[k].des+Chem->AdDesRate[k].ad);
 	numden1[k+Chem->NNeuT] = Tn-numden1[k];
+
+	//numden1[k] = Evln.NumDen[p]/2.;
+	//numden1[k+Chem->NNeuT] = Evln.NumDen[p1]+ Evln.NumDen[p]/2.;
+ 
       }
 
       for (k=0;k<2*Chem->NNeuT;k++){
@@ -124,8 +128,10 @@ int evolve(Real tend, Real dttry, Real abstol)
       }
     }
 
-    dt = MIN(1.5*Evln.t, 1e2*OneYear+Evln.t)-Evln.t;
-    Evln.t += dt;
+
+    //dt = MIN(1.5*Evln.t, 1e2*OneYear+Evln.t)-Evln.t;
+    dt = 0.1*Evln.t;
+    Evln.t += 0.1*Evln.t;
 
     status = EleMakeup(verbose);
 
